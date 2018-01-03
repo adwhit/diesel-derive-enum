@@ -69,7 +69,7 @@ let inserted = insert_into(my_table::table)
 assert_eq!(data, inserted);
 ```
 
-See [this test]("tests/lib.rs") for a full working example.
+See [this test](tests/lib.rs) for a full working example.
 
 ## License
 
