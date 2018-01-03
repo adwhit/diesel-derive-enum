@@ -71,6 +71,7 @@ fn pg_enum_impls(
     let variants_pg: &[Ident] = &variants_pg;
     quote! {
         pub use self::#modname::#diesel_type;
+        #[allow(non_snake_case)]
         mod #modname {
             use diesel::Queryable;
             use diesel::expression::AsExpression;

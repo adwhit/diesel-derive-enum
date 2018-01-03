@@ -6,12 +6,11 @@ to use Rust enums directly with Postgres databases.
 
 It is a fairly literal translation of [this code](https://github.com/diesel-rs/diesel/blob/8f8dd92135a788c7d0f2c5202dcb4d05339a0cc1/diesel_tests/tests/custom_types.rs) from the Diesel test suite.
 
-## Example usage: 
+### Example usage: 
 
 ```rust
 // define your enum
 #[derive(PgEnum)]
-#[PgType = "my_type"]  // This is the name of the type within the database
 pub enum MyEnum {      // All enum variants must be fieldless
     Foo,
     Bar,
@@ -21,10 +20,10 @@ pub enum MyEnum {      // All enum variants must be fieldless
 // define your table
 table! {
     use diesel::types::Integer;
-    use super::MyType;
+    use super::MyEnumMapping;
     my_table {
         id -> Integer,
-        my_enum -> MyType, // A Diesel type "MyType" has been created corresponding to my_type
+        my_enum -> MyEnumMapping, // Generated Diesel type - see below for explanation
     }
 }
 
@@ -69,9 +68,21 @@ let inserted = insert_into(my_table::table)
 assert_eq!(data, inserted);
 ```
 
-See [this test](tests/lib.rs) for a full working example.
+See [this test](tests/simple.rs) for a full working example.
 
-## License
+### What's up with the naming?
+
+Diesel maintains a set of internal types which correspond one-to-one to the types available in Postgres (and other databases). Each internal type then maps to some kind of Rust native type. e.g. `diesel::types::Integer` maps to `i32`. So, when we create a new type in Postgres with `CREATE TYPE ...`, we must also create a corresponding type in Diesel, and then create a mapping to some native Rust type (our enum). Hence there are three types we need to be aware of.
+
+By default, the Postgres and Diesel internal types are inferred from the name of the Rust enum. Specifically, we assume `MyEnum` corresponds to `my_enum` in Postgres and `MyEnumMapping` in Diesel. (The Diesel type is created by the plugin, the Postgres type must be created in SQL).
+
+These defaults can be overridden with the attributes `#[PgType = "..."]` and `#[DieselType = "..."]`.
+
+Similarly, we assume that the Postgres ENUM variants are simply the Rust enum variants translated to `snake_case`. These can be renamed with the inline annotation `#[pg_rename = "..."]`.
+
+See [this test](tests/rename.rs) for an example of renaming.
+
+### License
 
 Licensed under either of these:
 
