@@ -1,0 +1,16 @@
+[package]
+name = "diesel-derive-enum"
+version = "0.1.0"
+authors = ["Alex Whitney <adwhit@fastmail.com>"]
+
+[dependencies]
+quote = "0.3.15"
+syn = "0.11.11"
+heck = "0.3.0"
+
+[dev-dependencies]
+diesel = {version = "1", features = ["postgres"] }
+
+[lib]
+name = "diesel_derive_enum"
+proc-macro = true
