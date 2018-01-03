@@ -6,7 +6,7 @@ to use Rust enums directly with Postgres databases.
 
 It is a fairly literal translation of [this code](https://github.com/diesel-rs/diesel/blob/8f8dd92135a788c7d0f2c5202dcb4d05339a0cc1/diesel_tests/tests/custom_types.rs) from the Diesel test suite.
 
-Example usage: 
+## Example usage: 
 
 ```rust
 // define your enum
@@ -70,3 +70,12 @@ assert_eq!(data, inserted);
 ```
 
 See [this test]("tests/lib.rs") for a full working example.
+
+## License
+
+Licensed under either of these:
+
+ * Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or
+   https://www.apache.org/licenses/LICENSE-2.0)
+ * MIT license ([LICENSE-MIT](LICENSE-MIT) or
+   https://opensource.org/licenses/MIT)
