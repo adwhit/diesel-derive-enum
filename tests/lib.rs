@@ -42,7 +42,7 @@ fn enum_round_trip() {
             my_enum: MyEnum::BazQuxx,
         },
     ];
-    let database_url = std::env::var("TEST_DATABASE_URL").expect("Env var TEST_DATABASE_URL not found");
+    let database_url = std::env::var("TEST_DATABASE_URL").expect("Env var TEST_DATABASE_URL not set");
     let connection = PgConnection::establish(&database_url)
         .expect(&format!("Failed to connect to {}", database_url));
     connection
