@@ -28,7 +28,7 @@ struct Test {
 }
 
 #[test]
-fn custom_types_round_trip() {
+fn enum_round_trip() {
     use diesel::insert_into;
     use diesel::connection::SimpleConnection;
     use diesel::prelude::*;
@@ -42,14 +42,14 @@ fn custom_types_round_trip() {
             my_enum: MyEnum::BazQuxx,
         },
     ];
-    let database_url = "postgres://postgres:postgres@localhost:5432";
+    let database_url = std::env::var("TEST_DATABASE_URL").expect("Env var TEST_DATABASE_URL not found");
     let connection = PgConnection::establish(&database_url)
         .expect(&format!("Failed to connect to {}", database_url));
     connection
-        .batch_execute(
-            r#"
+        .batch_execute(r#"
+        DROP TYPE IF EXISTS my_type;
         CREATE TYPE my_type AS ENUM ('foo', 'bar', 'baz_quxx');
-        CREATE TABLE test (
+        CREATE TABLE IF NOT EXISTS test (
             id SERIAL PRIMARY KEY,
             my_enum my_type NOT NULL
         );
@@ -62,4 +62,9 @@ fn custom_types_round_trip() {
         .get_results(&connection)
         .unwrap();
     assert_eq!(data, inserted);
+    connection
+        .batch_execute(r#"
+            DROP TABLE test;
+            DROP TYPE my_type;
+         "#).unwrap();
 }
