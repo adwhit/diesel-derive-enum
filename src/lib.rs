@@ -9,16 +9,16 @@ extern crate syn;
 use proc_macro::TokenStream;
 use quote::Tokens;
 use syn::*;
-use heck::{CamelCase, SnakeCase};
+use heck::SnakeCase;
 
 #[proc_macro_derive(PgEnum, attributes(PgType, DieselType, pg_rename))]
 pub fn derive(input: TokenStream) -> TokenStream {
     let input = input.to_string();
     let ast = syn::parse_derive_input(&input).expect("Failed to parse item");
-    //println!("{:#?}", ast);
-    let pg_type = type_from_attrs(&ast.attrs, "PgType").unwrap_or(ast.ident.as_ref().to_snake_case());
-    let diesel_type = type_from_attrs(&ast.attrs, "DieselType").unwrap_or(
-        format!("{}Mapping", ast.ident.as_ref()));
+    let pg_type =
+        type_from_attrs(&ast.attrs, "PgType").unwrap_or(ast.ident.as_ref().to_snake_case());
+    let diesel_type = type_from_attrs(&ast.attrs, "DieselType")
+        .unwrap_or(format!("{}Mapping", ast.ident.as_ref()));
     let diesel_type = Ident::new(diesel_type);
 
     let quoted = match ast.body {
@@ -32,38 +32,42 @@ fn type_from_attrs(attrs: &[Attribute], attrname: &str) -> Option<String> {
     for attr in attrs {
         if let MetaItem::NameValue(ref key, Lit::Str(ref type_, _)) = attr.value {
             if key == attrname {
-                return Some(type_.clone())
+                return Some(type_.clone());
             }
         }
     }
     None
 }
 
-fn pg_enum_impls(pg_type: &str, diesel_type: &Ident, enum_: &Ident, variants: &[Variant]) -> Tokens {
+fn pg_enum_impls(
+    pg_type: &str,
+    diesel_type: &Ident,
+    enum_: &Ident,
+    variants: &[Variant],
+) -> Tokens {
     let modname = Ident::new(format!("pg_enum_impl_{}", enum_.as_ref()));
-    let variants: Vec<Ident> = variants
+    let variant_ids: Vec<Tokens> = variants
         .iter()
         .map(|variant| {
             if let VariantData::Unit = variant.data {
-                variant.ident.clone()
+                let id = &variant.ident;
+                quote! {
+                    #enum_::#id
+                }
             } else {
                 panic!("Variants must be fieldless")
             }
         })
         .collect();
-    let variants_tok: Vec<Tokens> = variants
-        .iter()
-        .map(|variant| {
-            quote! {
-                #enum_::#variant
-            }
-        })
-        .collect();
     let variants_pg: Vec<Ident> = variants
         .iter()
-        .map(|vid| Ident::new(format!(r#"b"{}""#, vid.as_ref().to_snake_case())))
+        .map(|variant| {
+            let pgname = type_from_attrs(&variant.attrs, "pg_rename")
+                .unwrap_or(variant.ident.as_ref().to_snake_case());
+            Ident::new(format!(r#"b"{}""#, pgname))
+        })
         .collect();
-    let variants: &[Tokens] = &variants_tok;
+    let variants: &[Tokens] = &variant_ids;
     let variants_pg: &[Ident] = &variants_pg;
     quote! {
         pub use self::#modname::#diesel_type;
