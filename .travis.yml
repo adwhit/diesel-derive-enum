@@ -1,0 +1,9 @@
+language: rust
+rust:
+  - stable
+  - beta
+  - nightly
+services:
+  - postgresql
+env:
+  TEST_DATABASE_URL=postgres://postgres@localhost:5432
