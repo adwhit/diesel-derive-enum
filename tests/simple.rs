@@ -55,11 +55,11 @@ fn enum_round_trip() {
     connection
         .batch_execute(
             r#"
-        DROP TYPE IF EXISTS my_type;
-        CREATE TYPE my_type AS ENUM ('foo', 'bar', 'baz_quxx');
+        DROP TYPE IF EXISTS my_enum;
+        CREATE TYPE my_enum AS ENUM ('foo', 'bar', 'baz_quxx');
         CREATE TEMP TABLE IF NOT EXISTS test_simple (
             id SERIAL PRIMARY KEY,
-            my_enum my_type NOT NULL
+            my_enum my_enum NOT NULL
         );
     "#,
         )
@@ -73,7 +73,7 @@ fn enum_round_trip() {
         .batch_execute(
             r#"
             DROP TABLE test_simple;
-            DROP TYPE my_type;
+            DROP TYPE my_enum;
          "#,
         )
         .unwrap();

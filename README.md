@@ -23,7 +23,7 @@ table! {
     use super::MyEnumMapping;
     my_table {
         id -> Integer,
-        my_enum -> MyEnumMapping, // Generated Diesel type - see below for explanation
+        some_enum -> MyEnumMapping, // Generated Diesel type - see below for explanation
     }
 }
 
@@ -32,18 +32,19 @@ table! {
 #[table_name = "my_table"]
 struct  MyRow {
     id: i32,
-    my_enum: MyEnum,
+    some_enum: MyEnum,
 }
 ```
 
 SQL to create corresponding table:
 
 ```sql
-CREATE TYPE my_type AS ENUM ('foo', 'bar', 'baz_quxx');
--- Note: the postgres ENUM values must correspond to snake_cased Rust enum variant names
+-- by default the postgres ENUM values correspond to snake_cased Rust enum variant names
+CREATE TYPE my_enum AS ENUM ('foo', 'bar', 'baz_quxx');
+
 CREATE TABLE my_table (
   id SERIAL PRIMARY KEY,
-  my_enum my_type NOT NULL
+  some_enum my_enum NOT NULL
 );
 ```
 
@@ -53,11 +54,11 @@ Now we can insert and retrieve MyEnum directly:
 let data = vec![
     MyRow {
         id: 1,
-        my_enum: MyEnum::Foo,
+        some_enum: MyEnum::Foo,
     },
     MyRow {
         id: 2,
-        my_enum: MyEnum::BazQuxx,
+        some_enum: MyEnum::BazQuxx,
     },
 ];
 let connection = PgConnection::establish(/*...*/).unwrap();
