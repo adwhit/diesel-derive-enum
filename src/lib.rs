@@ -62,7 +62,7 @@ fn pg_enum_impls(pg_type: &str, enum_: &Ident, variants: &[Variant]) -> Tokens {
     let variants: &[Tokens] = &variants_tok;
     let variants_snake: &[Ident] = &variants_snake;
     quote! {
-        use #modname::#pg_type;
+        pub use self::#modname::#pg_type;
         mod #modname {
             use diesel::Queryable;
             use diesel::expression::AsExpression;

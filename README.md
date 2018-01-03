@@ -10,7 +10,7 @@ Example:
 pub enum MyEnum {
     Foo,
     Bar,
-    Baz,
+    BazQuxx,
 }
 
 // define your table
@@ -35,7 +35,7 @@ struct  MyTable {
 SQL:
 
 ```sql
-CREATE TYPE my_type AS ENUM ('foo', 'bar');
+CREATE TYPE my_type AS ENUM ('foo', 'bar', 'baz_quxx');
 CREATE TABLE custom_types (
   id SERIAL PRIMARY KEY,
   custom_enum my_type NOT NULL

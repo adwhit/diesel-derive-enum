@@ -8,53 +8,58 @@ extern crate diesel_derive_enum;
 pub enum MyEnum {
     Foo,
     Bar,
-    Baz,
+    BazQuxx,
 }
 
 table! {
     use diesel::types::Integer;
     use super::MyType;
-    custom_types {
+    test {
         id -> Integer,
-        custom_enum -> MyType,
+        my_enum -> MyType,
     }
 }
 
 #[derive(Insertable, Queryable, Identifiable, Debug, PartialEq)]
-#[table_name = "custom_types"]
-struct HasCustomTypes {
+#[table_name = "test"]
+struct Test {
     id: i32,
-    custom_enum: MyEnum,
+    my_enum: MyEnum,
 }
 
 #[test]
 fn custom_types_round_trip() {
+    use diesel::insert_into;
+    use diesel::connection::SimpleConnection;
+    use diesel::prelude::*;
     let data = vec![
-        HasCustomTypes {
+        Test {
             id: 1,
-            custom_enum: MyEnum::Foo,
+            my_enum: MyEnum::Foo,
         },
-        HasCustomTypes {
+        Test {
             id: 2,
-            custom_enum: MyEnum::Bar,
+            my_enum: MyEnum::BazQuxx,
         },
     ];
-    // let connection = connection();
-    // connection
-    //     .batch_execute(
-    //         r#"
-    //     CREATE TYPE my_type AS ENUM ('foo', 'bar');
-    //     CREATE TABLE custom_types (
-    //         id SERIAL PRIMARY KEY,
-    //         custom_enum my_type NOT NULL
-    //     );
-    // "#,
-    //     )
-    //     .unwrap();
+    let database_url = "postgres://postgres:postgres@localhost:5432";
+    let connection = PgConnection::establish(&database_url)
+        .expect(&format!("Failed to connect to {}", database_url));
+    connection
+        .batch_execute(
+            r#"
+        CREATE TYPE my_type AS ENUM ('foo', 'bar', 'baz_quxx');
+        CREATE TABLE test (
+            id SERIAL PRIMARY KEY,
+            my_enum my_type NOT NULL
+        );
+    "#,
+        )
+        .unwrap();
 
-    // let inserted = insert_into(custom_types::table)
-    //     .values(&data)
-    //     .get_results(&connection)
-    //     .unwrap();
-    // assert_eq!(data, inserted);
+    let inserted = insert_into(test::table)
+        .values(&data)
+        .get_results(&connection)
+        .unwrap();
+    assert_eq!(data, inserted);
 }
