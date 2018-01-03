@@ -1,10 +1,12 @@
+#![allow(non_camel_case_types)]
+#![allow(non_snake_case)]
+
 #[macro_use]
 extern crate diesel;
 #[macro_use]
 extern crate diesel_derive_enum;
 
 #[derive(Debug, PartialEq, PgEnum)]
-#[PgType = "MyType"]
 pub enum MyEnum {
     Foo,
     Bar,
@@ -13,10 +15,10 @@ pub enum MyEnum {
 
 table! {
     use diesel::types::Integer;
-    use super::MyType;
+    use super::MyEnumMapping;
     test {
         id -> Integer,
-        my_enum -> MyType,
+        my_enum -> MyEnumMapping,
     }
 }
 
@@ -67,4 +69,53 @@ fn enum_round_trip() {
             DROP TABLE test;
             DROP TYPE my_type;
          "#).unwrap();
+}
+
+
+// snakey naming - should compile and not clobber above definitions
+
+#[derive(Debug, PartialEq, PgEnum)]
+pub enum my_enum {
+    foo,
+    bar,
+    bazQuxx,
+}
+
+table! {
+    use diesel::types::Integer;
+    use super::my_enumMapping;
+    test_snakey {
+        id -> Integer,
+        my_enum -> my_enumMapping,
+    }
+}
+
+
+#[derive(Insertable, Queryable, Identifiable, Debug, PartialEq)]
+#[table_name = "test_snakey"]
+struct test_snake {
+    id: i32,
+    my_enum: my_enum,
+}
+
+
+// renaming
+
+#[derive(Debug, PartialEq, PgEnum)]
+#[PgType = "Just_Whatever"]
+#[DieselType = "Some_Ugly_Renaming"]
+pub enum RenameMe {
+    #[pg_rename = "mod"]
+    Mod,
+    #[pg_rename = "type"]
+    Typo
+}
+
+table! {
+    use diesel::types::Integer;
+    use super::Some_Ugly_Renaming;
+    test_ugly {
+        id -> Integer,
+        my_enum -> Some_Ugly_Renaming,
+    }
 }

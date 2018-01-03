@@ -11,32 +11,36 @@ use quote::Tokens;
 use syn::*;
 use heck::{CamelCase, SnakeCase};
 
-#[proc_macro_derive(PgEnum, attributes(PgType))]
+#[proc_macro_derive(PgEnum, attributes(PgType, DieselType, pg_rename))]
 pub fn derive(input: TokenStream) -> TokenStream {
     let input = input.to_string();
     let ast = syn::parse_derive_input(&input).expect("Failed to parse item");
-
-    let attr = &ast.attrs.get(0).expect("Expected attribute: 'PgType'");
-    let pg_type = if let MetaItem::NameValue(ref key, Lit::Str(ref pg_type, _)) = attr.value {
-        if key != "PgType" {
-            panic!("Invalid attribute: {:?}", attr)
-        }
-        pg_type
-    } else {
-        panic!("Invalid attribute: {:?}", attr)
-    };
+    //println!("{:#?}", ast);
+    let pg_type = type_from_attrs(&ast.attrs, "PgType").unwrap_or(ast.ident.as_ref().to_snake_case());
+    let diesel_type = type_from_attrs(&ast.attrs, "DieselType").unwrap_or(
+        format!("{}Mapping", ast.ident.as_ref()));
+    let diesel_type = Ident::new(diesel_type);
 
     let quoted = match ast.body {
-        Body::Enum(ref variants) => pg_enum_impls(pg_type, &ast.ident, variants),
+        Body::Enum(ref variants) => pg_enum_impls(&pg_type, &diesel_type, &ast.ident, variants),
         Body::Struct(_) => panic!("#derive(PgEnum) can only be applied to enums"),
     };
     quoted.parse().unwrap()
 }
 
-fn pg_enum_impls(pg_type: &str, enum_: &Ident, variants: &[Variant]) -> Tokens {
-    let pg_type_snake = pg_type.to_snake_case();
-    let pg_type = Ident::new(pg_type.to_camel_case());
-    let modname = Ident::new(format!("pg_enum_impl_{}", pg_type_snake));
+fn type_from_attrs(attrs: &[Attribute], attrname: &str) -> Option<String> {
+    for attr in attrs {
+        if let MetaItem::NameValue(ref key, Lit::Str(ref type_, _)) = attr.value {
+            if key == attrname {
+                return Some(type_.clone())
+            }
+        }
+    }
+    None
+}
+
+fn pg_enum_impls(pg_type: &str, diesel_type: &Ident, enum_: &Ident, variants: &[Variant]) -> Tokens {
+    let modname = Ident::new(format!("pg_enum_impl_{}", enum_.as_ref()));
     let variants: Vec<Ident> = variants
         .iter()
         .map(|variant| {
@@ -55,14 +59,14 @@ fn pg_enum_impls(pg_type: &str, enum_: &Ident, variants: &[Variant]) -> Tokens {
             }
         })
         .collect();
-    let variants_snake: Vec<Ident> = variants
+    let variants_pg: Vec<Ident> = variants
         .iter()
         .map(|vid| Ident::new(format!(r#"b"{}""#, vid.as_ref().to_snake_case())))
         .collect();
     let variants: &[Tokens] = &variants_tok;
-    let variants_snake: &[Ident] = &variants_snake;
+    let variants_pg: &[Ident] = &variants_pg;
     quote! {
-        pub use self::#modname::#pg_type;
+        pub use self::#modname::#diesel_type;
         mod #modname {
             use diesel::Queryable;
             use diesel::expression::AsExpression;
@@ -73,48 +77,48 @@ fn pg_enum_impls(pg_type: &str, enum_: &Ident, variants: &[Variant]) -> Tokens {
             use std::error::Error;
             use std::io::Write;
 
-            pub struct #pg_type;
+            pub struct #diesel_type;
 
-            impl HasSqlType<#pg_type> for Pg {
+            impl HasSqlType<#diesel_type> for Pg {
                 fn metadata(lookup: &Self::MetadataLookup) -> Self::TypeMetadata {
-                    lookup.lookup_type(#pg_type_snake)
+                    lookup.lookup_type(#pg_type)
                 }
             }
 
-            impl NotNull for #pg_type {}
-            impl SingleValue for #pg_type {}
+            impl NotNull for #diesel_type {}
+            impl SingleValue for #diesel_type {}
 
-            impl<'a> AsExpression<#pg_type> for &'a #enum_ {
-                type Expression = Bound<#pg_type, &'a #enum_>;
+            impl<'a> AsExpression<#diesel_type> for &'a #enum_ {
+                type Expression = Bound<#diesel_type, &'a #enum_>;
 
                 fn as_expression(self) -> Self::Expression {
                     Bound::new(self)
                 }
             }
 
-            impl ToSql<#pg_type, Pg> for #enum_ {
+            impl ToSql<#diesel_type, Pg> for #enum_ {
                 fn to_sql<W: Write>(
                     &self,
                     out: &mut ToSqlOutput<W, Pg>,
                 ) -> Result<IsNull, Box<Error + Send + Sync>> {
                     match *self {
-                        #(#variants => out.write_all(#variants_snake)?,)*
+                        #(#variants => out.write_all(#variants_pg)?,)*
                     }
                     Ok(IsNull::No)
                 }
             }
 
-            impl FromSqlRow<#pg_type, Pg> for #enum_ {
+            impl FromSqlRow<#diesel_type, Pg> for #enum_ {
                 fn build_from_row<T: Row<Pg>>(row: &mut T) -> Result<Self, Box<Error + Send + Sync>> {
                     match row.take() {
-                        #(Some(#variants_snake) => Ok(#variants),)*
+                        #(Some(#variants_pg) => Ok(#variants),)*
                         Some(_) => Err("Unrecognized enum variant".into()),
                         None => Err("Unexpected null for non-null column".into()),
                     }
                 }
             }
 
-            impl Queryable<#pg_type, Pg> for #enum_ {
+            impl Queryable<#diesel_type, Pg> for #enum_ {
                 type Row = Self;
 
                 fn build(row: Self::Row) -> Self {
