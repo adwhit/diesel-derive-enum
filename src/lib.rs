@@ -101,6 +101,14 @@ fn pg_enum_impls(
                 }
             }
 
+            impl<'a> AsExpression<Nullable<#diesel_type>> for &'a #enum_ {
+                type Expression = Bound<Nullable<#diesel_type>, &'a #enum_>;
+
+                fn as_expression(self) -> Self::Expression {
+                    Bound::new(self)
+                }
+            }
+
             impl ToSql<#diesel_type, Pg> for #enum_ {
                 fn to_sql<W: Write>(
                     &self,

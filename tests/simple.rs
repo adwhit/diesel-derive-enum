@@ -104,3 +104,28 @@ struct test_snake {
     id: i32,
     my_enum: my_enum,
 }
+
+// test nullable compiles
+
+table! {
+    use diesel::types::{Integer, Nullable};
+    use super::MyEnumMapping;
+    test_nullable {
+        id -> Integer,
+        my_enum -> Nullable<MyEnumMapping>,
+    }
+}
+
+#[derive(Insertable, Queryable, Identifiable, Debug, PartialEq)]
+#[table_name = "test_nullable"]
+struct Nullable {
+    id: i32,
+    my_enum: Option<MyEnum>,
+}
+
+#[derive(Insertable, Queryable, Identifiable, Debug, PartialEq)]
+#[table_name = "test_nullable"]
+struct MaybeNullable {
+    id: i32,
+    my_enum: MyEnum,
+}
