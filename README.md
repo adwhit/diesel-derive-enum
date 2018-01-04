@@ -1,4 +1,5 @@
 # diesel-derive-enum
+[![crates.io](https://img.shields.io/crates/v/diesel-derive-enum.svg)](https://crates.io/crates/diesel-derive-enum)
 [![Build Status](https://travis-ci.org/adwhit/diesel-derive-enum.svg?branch=master)](https://travis-ci.org/adwhit/diesel-derive-enum)
 
 This crate allows one to automatically derive the Diesel boilerplate necessary
