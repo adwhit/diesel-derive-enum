@@ -141,7 +141,8 @@ fn pg_enum_impls(
                 fn build_from_row<T: Row<Pg>>(row: &mut T) -> Result<Self, Box<Error + Send + Sync>> {
                     match row.take() {
                         #(Some(#variants_pg) => Ok(#variants),)*
-                        Some(_) => Err("Unrecognized enum variant".into()),
+                        Some(v) => Err(format!("Unrecognized enum variant: '{}'",
+                                               String::from_utf8_lossy(v)).into()),
                         None => Err("Unexpected null for non-null column".into()),
                     }
                 }
