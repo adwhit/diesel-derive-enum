@@ -93,6 +93,22 @@ fn pg_enum_impls(
             impl NotNull for #diesel_type {}
             impl SingleValue for #diesel_type {}
 
+            impl AsExpression<#diesel_type> for #enum_ {
+                type Expression = Bound<#diesel_type, #enum_>;
+
+                fn as_expression(self) -> Self::Expression {
+                    Bound::new(self)
+                }
+            }
+
+            impl AsExpression<Nullable<#diesel_type>> for #enum_ {
+                type Expression = Bound<Nullable<#diesel_type>, #enum_>;
+
+                fn as_expression(self) -> Self::Expression {
+                    Bound::new(self)
+                }
+            }
+
             impl<'a> AsExpression<#diesel_type> for &'a #enum_ {
                 type Expression = Bound<#diesel_type, &'a #enum_>;
 
