@@ -84,7 +84,7 @@ Similarly, we assume that the Postgres ENUM variants are simply the Rust enum va
 
 See [this test](tests/rename.rs) for an example of renaming.
 
-#### `infer_schema` and `print-schema`
+#### `infer_schema!` and `print-schema`
 
 The `infer_schema!` macro and `print-schema` command (from `diesel_cli`) each attempt to connect to an existing DB and generate a correct mapping of Postgres columns to Diesel internal types. If a custom ENUM exists in the database, Diesel will simply assume that the internal mapping type is the ENUM name, Title-cased (e.g. `my_enum` -> `My_enum`). Therefore the derived mapping name must also be corrected with the `DieselType` attribute e.g. `#[DieselType] = "My_enum"]`.
 
