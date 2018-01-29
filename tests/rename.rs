@@ -26,7 +26,7 @@ pub enum RenameMe {
 }
 
 table! {
-    use diesel::types::Integer;
+    use diesel::sql_types::Integer;
     use super::Some_Ugly_Renaming;
     test_rename {
         id -> Integer,

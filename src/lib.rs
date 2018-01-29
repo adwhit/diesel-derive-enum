@@ -78,7 +78,9 @@ fn pg_enum_impls(
             use diesel::expression::bound::Bound;
             use diesel::pg::Pg;
             use diesel::row::Row;
-            use diesel::types::*;
+            use diesel::sql_types::*;
+            use diesel::serialize::{ToSql, IsNull, Output};
+            use diesel::deserialize::FromSqlRow;
             use std::error::Error;
             use std::io::Write;
 
@@ -128,7 +130,7 @@ fn pg_enum_impls(
             impl ToSql<#diesel_type, Pg> for #enum_ {
                 fn to_sql<W: Write>(
                     &self,
-                    out: &mut ToSqlOutput<W, Pg>,
+                    out: &mut Output<W, Pg>,
                 ) -> Result<IsNull, Box<Error + Send + Sync>> {
                     match *self {
                         #(#variants => out.write_all(#variants_pg)?,)*
