@@ -15,7 +15,7 @@ syn = "0.11.11"
 heck = "0.3.0"
 
 [dev-dependencies]
-diesel = {version = ">=1.1", features = ["postgres"] }
+diesel = {version = "1.1", features = ["postgres"] }
 
 [lib]
 name = "diesel_derive_enum"
