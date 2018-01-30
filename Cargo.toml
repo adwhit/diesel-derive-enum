@@ -1,6 +1,6 @@
 [package]
 name = "diesel-derive-enum"
-version = "0.2.2"
+version = "0.3.0"
 description = "Derive diesel boilerplate for using enums in Postgres"
 authors = ["Alex Whitney <adwhit@fastmail.com>"]
 repository = "http://github.com/adwhit/diesel-derive-enum"
