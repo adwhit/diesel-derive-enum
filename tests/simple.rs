@@ -18,7 +18,7 @@ pub enum MyEnum {
 }
 
 table! {
-    use diesel::types::Integer;
+    use diesel::sql_types::Integer;
     use super::MyEnumMapping;
     test_simple {
         id -> Integer,
@@ -90,7 +90,7 @@ pub enum my_enum {
 }
 
 table! {
-    use diesel::types::Integer;
+    use diesel::sql_types::Integer;
     use super::my_enumMapping;
     test_snakey {
         id -> Integer,
@@ -108,7 +108,7 @@ struct test_snake {
 // test nullable compiles
 
 table! {
-    use diesel::types::{Integer, Nullable};
+    use diesel::sql_types::{Integer, Nullable};
     use super::MyEnumMapping;
     test_nullable {
         id -> Integer,

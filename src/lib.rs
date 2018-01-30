@@ -78,8 +78,9 @@ fn pg_enum_impls(
             use diesel::expression::bound::Bound;
             use diesel::pg::Pg;
             use diesel::row::Row;
-            use diesel::types::*;
-            use std::error::Error;
+            use diesel::sql_types::*;
+            use diesel::serialize::{self, ToSql, IsNull, Output};
+            use diesel::deserialize::{self, FromSqlRow};
             use std::io::Write;
 
             pub struct #diesel_type;
@@ -126,10 +127,7 @@ fn pg_enum_impls(
             }
 
             impl ToSql<#diesel_type, Pg> for #enum_ {
-                fn to_sql<W: Write>(
-                    &self,
-                    out: &mut ToSqlOutput<W, Pg>,
-                ) -> Result<IsNull, Box<Error + Send + Sync>> {
+                fn to_sql<W: Write>(&self, out: &mut Output<W, Pg>) -> serialize::Result {
                     match *self {
                         #(#variants => out.write_all(#variants_pg)?,)*
                     }
@@ -138,7 +136,7 @@ fn pg_enum_impls(
             }
 
             impl FromSqlRow<#diesel_type, Pg> for #enum_ {
-                fn build_from_row<T: Row<Pg>>(row: &mut T) -> Result<Self, Box<Error + Send + Sync>> {
+                fn build_from_row<T: Row<Pg>>(row: &mut T) -> deserialize::Result<Self> {
                     match row.take() {
                         #(Some(#variants_pg) => Ok(#variants),)*
                         Some(v) => Err(format!("Unrecognized enum variant: '{}'",
