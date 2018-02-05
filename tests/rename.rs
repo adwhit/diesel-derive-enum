@@ -20,9 +20,9 @@ pub fn connection() -> PgConnection {
 #[PgType = "Just_Whatever"]
 #[DieselType = "Some_Ugly_Renaming"]
 pub enum RenameMe {
-    #[pg_rename = "mod"] Mod,
-    #[pg_rename = "type"] typo,
-    #[pg_rename = "with spaces"] WithASpace,
+    #[db_rename = "mod"] Mod,
+    #[db_rename = "type"] typo,
+    #[db_rename = "with spaces"] WithASpace,
 }
 
 table! {
