@@ -13,10 +13,13 @@ readme = "README.md"
 quote = "0.3.15"
 syn = "0.11.11"
 heck = "0.3.0"
-diesel = {version = "1.1", features = ["postgres", "sqlite"] }
 
 [dev-dependencies]
 diesel = {version = "1.1", features = ["postgres", "sqlite"] }
+
+[features]
+postgres = []
+sqlite = []
 
 [lib]
 name = "diesel_derive_enum"

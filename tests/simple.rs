@@ -8,9 +8,8 @@ extern crate diesel_derive_enum;
 
 use diesel::prelude::*;
 use diesel::insert_into;
-use diesel::connection::SimpleConnection;
 
-#[derive(Debug, PartialEq, PgEnum)]
+#[derive(Debug, PartialEq, DbEnum)]
 pub enum MyEnum {
     Foo,
     Bar,
@@ -41,12 +40,12 @@ pub fn pg_connection() -> PgConnection {
 
 pub fn sqlite_connection() -> SqliteConnection {
     let database_url = ":memory:";
-    SqliteConnection::establish(&database_url).expect(&format!("Failed to connect to {}", database_url))
+    SqliteConnection::establish(&database_url)
+        .expect(&format!("Failed to connect to {}", database_url))
 }
 
-#[test]
-fn pg_enum_round_trip() {
-    let data = vec![
+fn sample_data() -> Vec<Simple> {
+    vec![
         Simple {
             id: 1,
             my_enum: MyEnum::Foo,
@@ -55,8 +54,19 @@ fn pg_enum_round_trip() {
             id: 2,
             my_enum: MyEnum::BazQuxx,
         },
-    ];
+        Simple {
+            id: 33,
+            my_enum: MyEnum::Bar,
+        },
+    ]
+}
+
+#[test]
+#[cfg(feature = "postgres")]
+fn pg_enum_round_trip() {
+    use diesel::connection::SimpleConnection;
     let connection = pg_connection();
+    let data = sample_data();
     connection
         .batch_execute(
             r#"
@@ -85,38 +95,59 @@ fn pg_enum_round_trip() {
 }
 
 #[test]
+#[cfg(feature = "sqlite")]
 fn sqlite_enum_round_trip() {
-    let data = vec![
-        Simple {
-            id: 1,
-            my_enum: MyEnum::Foo,
-        },
-        Simple {
-            id: 2,
-            my_enum: MyEnum::BazQuxx,
-        },
-    ];
     let connection = sqlite_connection();
+    let data = sample_data();
     connection
-        .execute(r#"
+        .execute(
+            r#"
         CREATE TABLE test_simple (
             id SERIAL PRIMARY KEY,
-            my_enum my_enum NOT NULL
+            my_enum TEXT CHECK(my_enum IN ('foo', 'bar', 'baz_quxx')) NOT NULL
         );
-    "#).unwrap();
+    "#,
+        )
+        .unwrap();
     let ct = insert_into(test_simple::table)
         .values(&data)
-        .execute(&connection).unwrap();
+        .execute(&connection)
+        .unwrap();
     assert_eq!(data.len(), ct);
     let items = test_simple::table.load::<Simple>(&connection).unwrap();
     assert_eq!(data, items);
 }
 
+#[test]
+#[cfg(feature = "sqlite")]
+fn sqlite_invalid_enum() {
+    let connection = sqlite_connection();
+    let data = sample_data();
+    connection
+        .execute(
+            r#"
+        CREATE TABLE test_simple (
+            id SERIAL PRIMARY KEY,
+            my_enum TEXT CHECK(my_enum IN ('food', 'bar', 'baz_quxx')) NOT NULL
+        );
+    "#,
+        )
+        .unwrap();
+    if let Err(e) = insert_into(test_simple::table)
+        .values(&data)
+        .execute(&connection)
+    {
+        let err = format!("{}", e);
+        assert!(err.contains("CHECK constraint failed"));
+    } else {
+        panic!("should have failed to insert")
+    }
+}
 
 // test snakey naming - should compile and not clobber above definitions
 // (but we won't actually bother round-tripping)
 
-#[derive(Debug, PartialEq, PgEnum)]
+#[derive(Debug, PartialEq, DbEnum)]
 pub enum my_enum {
     foo,
     bar,

@@ -11,7 +11,7 @@ use quote::Tokens;
 use syn::*;
 use heck::SnakeCase;
 
-#[proc_macro_derive(PgEnum, attributes(PgType, DieselType, db_rename))]
+#[proc_macro_derive(DbEnum, attributes(PgType, DieselType, db_rename))]
 pub fn derive(input: TokenStream) -> TokenStream {
     let input = input.to_string();
     let ast = syn::parse_derive_input(&input).expect("Failed to parse item");
@@ -24,7 +24,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
     let quoted = if let Body::Enum(ref variants) = ast.body {
         generate_derive_enum_impls(&db_type, &diesel_mapping, &ast.ident, variants)
     } else {
-        panic!("#derive(PgEnum) can only be applied to enums")
+        panic!("#derive(DbEnum) can only be applied to enums")
     };
 
     quoted.parse().unwrap()
@@ -73,7 +73,8 @@ fn generate_derive_enum_impls(
     let variants_db: &[Ident] = &variants_db;
 
     let common_impl = generate_common_impl(diesel_mapping, enum_ty);
-    let pg_impl = generate_postgres_impl(db_type, diesel_mapping, enum_ty, variants_rs, variants_db);
+    let pg_impl =
+        generate_postgres_impl(db_type, diesel_mapping, enum_ty, variants_rs, variants_db);
     let sqlite_impl = generate_sqlite_impl(diesel_mapping, enum_ty, variants_rs, variants_db);
     quote! {
         pub use self::#modname::#diesel_mapping;
@@ -86,10 +87,7 @@ fn generate_derive_enum_impls(
     }
 }
 
-fn generate_common_impl(
-    diesel_mapping: &Ident,
-    enum_ty: &Ident,
-) -> Tokens {
+fn generate_common_impl(diesel_mapping: &Ident, enum_ty: &Ident) -> Tokens {
     quote! {
         use diesel::Queryable;
         use diesel::expression::AsExpression;
@@ -146,40 +144,45 @@ fn generate_postgres_impl(
     variants_rs: &[Tokens],
     variants_db: &[Ident],
 ) -> Tokens {
+    let pg_cfg = Ident::new(r#"#[cfg(feature = "postgres")]"#);
     quote! {
-        use diesel::pg::Pg;
+        #pg_cfg
+        mod pg_impl {
+            use super::*;
+            use diesel::pg::Pg;
 
-        impl HasSqlType<#diesel_mapping> for Pg {
-            fn metadata(lookup: &Self::MetadataLookup) -> Self::TypeMetadata {
-                lookup.lookup_type(#db_type)
-            }
-        }
-
-        impl ToSql<#diesel_mapping, Pg> for #enum_ty {
-            fn to_sql<W: Write>(&self, out: &mut Output<W, Pg>) -> serialize::Result {
-                match *self {
-                    #(#variants_rs => out.write_all(#variants_db)?,)*
-                }
-                Ok(IsNull::No)
-            }
-        }
-
-        impl FromSqlRow<#diesel_mapping, Pg> for #enum_ty {
-            fn build_from_row<T: Row<Pg>>(row: &mut T) -> deserialize::Result<Self> {
-                match row.take() {
-                    #(Some(#variants_db) => Ok(#variants_rs),)*
-                    Some(v) => Err(format!("Unrecognized enum variant: '{}'",
-                                           String::from_utf8_lossy(v)).into()),
-                    None => Err("Unexpected null for non-null column".into()),
+            impl HasSqlType<#diesel_mapping> for Pg {
+                fn metadata(lookup: &Self::MetadataLookup) -> Self::TypeMetadata {
+                    lookup.lookup_type(#db_type)
                 }
             }
-        }
 
-        impl Queryable<#diesel_mapping, Pg> for #enum_ty {
-            type Row = Self;
+            impl ToSql<#diesel_mapping, Pg> for #enum_ty {
+                fn to_sql<W: Write>(&self, out: &mut Output<W, Pg>) -> serialize::Result {
+                    match *self {
+                        #(#variants_rs => out.write_all(#variants_db)?,)*
+                    }
+                    Ok(IsNull::No)
+                }
+            }
 
-            fn build(row: Self::Row) -> Self {
-                row
+            impl FromSqlRow<#diesel_mapping, Pg> for #enum_ty {
+                fn build_from_row<T: Row<Pg>>(row: &mut T) -> deserialize::Result<Self> {
+                    match row.take() {
+                        #(Some(#variants_db) => Ok(#variants_rs),)*
+                        Some(v) => Err(format!("Unrecognized enum variant: '{}'",
+                                               String::from_utf8_lossy(v)).into()),
+                        None => Err("Unexpected null for non-null column".into()),
+                    }
+                }
+            }
+
+            impl Queryable<#diesel_mapping, Pg> for #enum_ty {
+                type Row = Self;
+
+                fn build(row: Self::Row) -> Self {
+                    row
+                }
             }
         }
     }
@@ -191,39 +194,44 @@ fn generate_sqlite_impl(
     variants_rs: &[Tokens],
     variants_db: &[Ident],
 ) -> Tokens {
+    let sqlite_cfg = Ident::new(r#"#[cfg(feature = "sqlite")]"#);
     quote! {
-        use diesel::sqlite::Sqlite;
+        #sqlite_cfg
+        mod sqlite_impl {
+            use super::*;
+            use diesel::sqlite::Sqlite;
 
-        impl HasSqlType<#diesel_mapping> for Sqlite {
-            fn metadata(_lookup: &Self::MetadataLookup) -> Self::TypeMetadata {
-                diesel::sqlite::SqliteType::Text
-            }
-        }
-
-        impl ToSql<#diesel_mapping, Sqlite> for #enum_ty {
-            fn to_sql<W: Write>(&self, out: &mut Output<W, Sqlite>) -> serialize::Result {
-                match *self {
-                    #(#variants_rs => out.write_all(#variants_db)?,)*
-                }
-                Ok(IsNull::No)
-            }
-        }
-
-        impl FromSqlRow<#diesel_mapping, Sqlite> for #enum_ty {
-            fn build_from_row<T: Row<Sqlite>>(row: &mut T) -> deserialize::Result<Self> {
-                match row.take().map(|v| v.read_blob()) {
-                    #(Some(#variants_db) => Ok(#variants_rs),)*
-                    Some(blob) => Err(format!("Unexpected variant: {}", String::from_utf8_lossy(blob)).into()),
-                    None => Err("Unexpected null for non-null column".into()),
+            impl HasSqlType<#diesel_mapping> for Sqlite {
+                fn metadata(_lookup: &Self::MetadataLookup) -> Self::TypeMetadata {
+                    diesel::sqlite::SqliteType::Text
                 }
             }
-        }
 
-        impl Queryable<#diesel_mapping, Sqlite> for #enum_ty {
-            type Row = Self;
+            impl ToSql<#diesel_mapping, Sqlite> for #enum_ty {
+                fn to_sql<W: Write>(&self, out: &mut Output<W, Sqlite>) -> serialize::Result {
+                    match *self {
+                        #(#variants_rs => out.write_all(#variants_db)?,)*
+                    }
+                    Ok(IsNull::No)
+                }
+            }
 
-            fn build(row: Self::Row) -> Self {
-                row
+            impl FromSqlRow<#diesel_mapping, Sqlite> for #enum_ty {
+                fn build_from_row<T: Row<Sqlite>>(row: &mut T) -> deserialize::Result<Self> {
+                    match row.take().map(|v| v.read_blob()) {
+                        #(Some(#variants_db) => Ok(#variants_rs),)*
+                        Some(blob) => Err(format!("Unexpected variant: {}", String::from_utf8_lossy(blob)).into()),
+                        None => Err("Unexpected null for non-null column".into()),
+                    }
+                }
+            }
+
+            impl Queryable<#diesel_mapping, Sqlite> for #enum_ty {
+                type Row = Self;
+
+                fn build(row: Self::Row) -> Self {
+                    row
+                }
             }
         }
     }

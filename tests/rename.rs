@@ -6,9 +6,7 @@ pub extern crate diesel;
 #[macro_use]
 extern crate diesel_derive_enum;
 
-use ::diesel::prelude::*;
-use ::diesel::insert_into;
-use diesel::connection::SimpleConnection;
+use diesel::prelude::*;
 
 pub fn connection() -> PgConnection {
     let database_url =
@@ -16,7 +14,7 @@ pub fn connection() -> PgConnection {
     PgConnection::establish(&database_url).expect(&format!("Failed to connect to {}", database_url))
 }
 
-#[derive(Debug, PartialEq, PgEnum)]
+#[derive(Debug, PartialEq, DbEnum)]
 #[PgType = "Just_Whatever"]
 #[DieselType = "Some_Ugly_Renaming"]
 pub enum RenameMe {
@@ -38,11 +36,14 @@ table! {
 #[table_name = "test_rename"]
 struct TestRename {
     id: i32,
-    renamed: RenameMe
+    renamed: RenameMe,
 }
 
 #[test]
+#[cfg(feature = "postgres")]
 fn rename_round_trip() {
+    use diesel::connection::SimpleConnection;
+    use diesel::insert_into;
     let data = vec![
         TestRename {
             id: 1,
@@ -50,7 +51,7 @@ fn rename_round_trip() {
         },
         TestRename {
             id: 2,
-            renamed: RenameMe::WithASpace
+            renamed: RenameMe::WithASpace,
         },
     ];
     let connection = connection();
