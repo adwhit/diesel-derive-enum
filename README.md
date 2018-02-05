@@ -22,8 +22,8 @@ diesel-derive-enum = { version = "0.4", features = ["postgres"] }
 
 // define your enum
 #[derive(DbEnum)]
-pub enum MyEnum {      // All enum variants must be fieldless
-    Foo,
+pub enum MyEnum {
+    Foo,  // All variants must be fieldless
     Bar,
     BazQuxx,
 }
@@ -82,14 +82,14 @@ assert_eq!(data, inserted);
 
 See [this test](tests/simple.rs) for a full working example.
 
-### Sqlite
+### sqlite
 
-Sqlite is untyped. [Yes, really.](https://dba.stackexchange.com/questions/106364/text-string-stored-in-sqlite-integer-column). You can store any kind of data in any column and it won't complain. How do we get some nice static checking then? Well... you can't, really, but you can emulate it by add a `CHECK` to your column definition like so:
+`sqlite` is untyped. [Yes, really.](https://dba.stackexchange.com/questions/106364/text-string-stored-in-sqlite-integer-column). You can store any kind of data in any column and it won't complain. How do we get some nice static checking then? Well... you can't, really, but you can emulate it by add a `CHECK` to your column definition like so:
 
 ```sql
 CREATE TABLE test_simple (
     id SERIAL PRIMARY KEY,
-    my_enum TEXT CHECK(my_enum IN ('foo', 'bar', 'baz_quxx')) NOT NULL
+    some_enum TEXT CHECK(my_enum IN ('foo', 'bar', 'baz_quxx')) NOT NULL
 );
 ```
 
