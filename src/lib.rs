@@ -73,120 +73,145 @@ fn pg_enum_impls(
         pub use self::#modname::#diesel_type;
         #[allow(non_snake_case)]
         mod #modname {
-            use diesel::Queryable;
-            use diesel::expression::AsExpression;
-            use diesel::expression::bound::Bound;
-            use diesel::row::Row;
-            use diesel::sql_types::*;
-            use diesel::serialize::{self, ToSql, IsNull, Output};
-            use diesel::deserialize::{self, FromSqlRow};
-            use std::io::Write;
+    }
+}
 
-            use diesel::pg::Pg;
-            pub struct #diesel_type;
+fn common_impl() -> Tokens {
+    quote! {
+        use diesel::Queryable;
+        use diesel::expression::AsExpression;
+        use diesel::expression::bound::Bound;
+        use diesel::row::Row;
+        use diesel::sql_types::*;
+        use diesel::serialize::{self, ToSql, IsNull, Output};
+        use diesel::deserialize::{self, FromSqlRow};
+        use std::io::Write;
 
-            impl HasSqlType<#diesel_type> for Pg {
-                fn metadata(lookup: &Self::MetadataLookup) -> Self::TypeMetadata {
-                    lookup.lookup_type(#pg_type)
+        pub struct #diesel_type;
+
+        impl NotNull for #diesel_type {}
+        impl SingleValue for #diesel_type {}
+
+        impl AsExpression<#diesel_type> for #enum_ {
+            type Expression = Bound<#diesel_type, #enum_>;
+
+            fn as_expression(self) -> Self::Expression {
+                Bound::new(self)
+            }
+        }
+
+        impl AsExpression<Nullable<#diesel_type>> for #enum_ {
+            type Expression = Bound<Nullable<#diesel_type>, #enum_>;
+
+            fn as_expression(self) -> Self::Expression {
+                Bound::new(self)
+            }
+        }
+
+        impl<'a> AsExpression<#diesel_type> for &'a #enum_ {
+            type Expression = Bound<#diesel_type, &'a #enum_>;
+
+            fn as_expression(self) -> Self::Expression {
+                Bound::new(self)
+            }
+        }
+
+        impl<'a> AsExpression<Nullable<#diesel_type>> for &'a #enum_ {
+            type Expression = Bound<Nullable<#diesel_type>, &'a #enum_>;
+
+            fn as_expression(self) -> Self::Expression {
+                Bound::new(self)
+            }
+        }
+    }
+}
+
+fn postgres_impl(
+    pg_type: &str,
+    diesel_type: &Ident,
+    enum_: &Ident,
+    variants: &[Variant],
+) -> Tokens {
+    quote! {
+        use diesel::pg::Pg;
+
+        impl HasSqlType<#diesel_type> for Pg {
+            fn metadata(lookup: &Self::MetadataLookup) -> Self::TypeMetadata {
+                lookup.lookup_type(#pg_type)
+            }
+        }
+
+        impl ToSql<#diesel_type, Pg> for #enum_ {
+            fn to_sql<W: Write>(&self, out: &mut Output<W, Pg>) -> serialize::Result {
+                match *self {
+                    #(#variants => out.write_all(#variants_pg)?,)*
+                }
+                Ok(IsNull::No)
+            }
+        }
+
+        impl FromSqlRow<#diesel_type, Pg> for #enum_ {
+            fn build_from_row<T: Row<Pg>>(row: &mut T) -> deserialize::Result<Self> {
+                match row.take() {
+                    #(Some(#variants_pg) => Ok(#variants),)*
+                    Some(v) => Err(format!("Unrecognized enum variant: '{}'",
+                                           String::from_utf8_lossy(v)).into()),
+                    None => Err("Unexpected null for non-null column".into()),
                 }
             }
+        }
 
-            impl NotNull for #diesel_type {}
-            impl SingleValue for #diesel_type {}
+        impl Queryable<#diesel_type, Pg> for #enum_ {
+            type Row = Self;
 
-            impl AsExpression<#diesel_type> for #enum_ {
-                type Expression = Bound<#diesel_type, #enum_>;
+            fn build(row: Self::Row) -> Self {
+                row
+            }
+        }
+    }
+}
 
-                fn as_expression(self) -> Self::Expression {
-                    Bound::new(self)
+fn sqlite_impl(
+    pg_type: &str,
+    diesel_type: &Ident,
+    enum_: &Ident,
+    variants: &[Variant],
+) -> Tokens {
+    quote! {
+        // Sqlite impl
+
+        use diesel::sqlite::Sqlite;
+
+        impl HasSqlType<#diesel_type> for Sqlite {
+            fn metadata(lookup: &Self::MetadataLookup) -> Self::TypeMetadata {
+                diesel::sqlite::SqliteType::Text
+            }
+        }
+
+        impl ToSql<#diesel_type, Sqlite> for #enum_ {
+            fn to_sql<W: Write>(&self, out: &mut Output<W, Sqlite>) -> serialize::Result {
+                match *self {
+                    #(#variants => out.write_all(#variants_pg)?,)*
+                }
+                Ok(IsNull::No)
+            }
+        }
+
+        impl FromSqlRow<#diesel_type, Sqlite> for #enum_ {
+            fn build_from_row<T: Row<Sqlite>>(row: &mut T) -> deserialize::Result<Self> {
+                match row.take().map(|v| v.read_blob()) {
+                    #(Some(#variants_pg) => Ok(#variants),)*
+                    None => Err("Unexpected null for non-null column".into()),
+                    _ => unimplemented!(),
                 }
             }
+        }
 
-            impl AsExpression<Nullable<#diesel_type>> for #enum_ {
-                type Expression = Bound<Nullable<#diesel_type>, #enum_>;
+        impl Queryable<#diesel_type, Sqlite> for #enum_ {
+            type Row = Self;
 
-                fn as_expression(self) -> Self::Expression {
-                    Bound::new(self)
-                }
-            }
-
-            impl<'a> AsExpression<#diesel_type> for &'a #enum_ {
-                type Expression = Bound<#diesel_type, &'a #enum_>;
-
-                fn as_expression(self) -> Self::Expression {
-                    Bound::new(self)
-                }
-            }
-
-            impl<'a> AsExpression<Nullable<#diesel_type>> for &'a #enum_ {
-                type Expression = Bound<Nullable<#diesel_type>, &'a #enum_>;
-
-                fn as_expression(self) -> Self::Expression {
-                    Bound::new(self)
-                }
-            }
-
-            impl ToSql<#diesel_type, Pg> for #enum_ {
-                fn to_sql<W: Write>(&self, out: &mut Output<W, Pg>) -> serialize::Result {
-                    match *self {
-                        #(#variants => out.write_all(#variants_pg)?,)*
-                    }
-                    Ok(IsNull::No)
-                }
-            }
-
-            impl FromSqlRow<#diesel_type, Pg> for #enum_ {
-                fn build_from_row<T: Row<Pg>>(row: &mut T) -> deserialize::Result<Self> {
-                    match row.take() {
-                        #(Some(#variants_pg) => Ok(#variants),)*
-                        Some(v) => Err(format!("Unrecognized enum variant: '{}'",
-                                               String::from_utf8_lossy(v)).into()),
-                        None => Err("Unexpected null for non-null column".into()),
-                    }
-                }
-            }
-
-            impl Queryable<#diesel_type, Pg> for #enum_ {
-                type Row = Self;
-
-                fn build(row: Self::Row) -> Self {
-                    row
-                }
-            }
-
-            use diesel::sqlite::Sqlite;
-
-            impl HasSqlType<#diesel_type> for Sqlite {
-                fn metadata(lookup: &Self::MetadataLookup) -> Self::TypeMetadata {
-                    diesel::sqlite::SqliteType::Text
-                }
-            }
-
-            impl ToSql<#diesel_type, Sqlite> for #enum_ {
-                fn to_sql<W: Write>(&self, out: &mut Output<W, Sqlite>) -> serialize::Result {
-                    match *self {
-                        #(#variants => out.write_all(#variants_pg)?,)*
-                    }
-                    Ok(IsNull::No)
-                }
-            }
-
-            impl FromSqlRow<#diesel_type, Sqlite> for #enum_ {
-                fn build_from_row<T: Row<Sqlite>>(row: &mut T) -> deserialize::Result<Self> {
-                    match row.take().map(|v| v.read_blob()) {
-                        #(Some(#variants_pg) => Ok(#variants),)*
-                        None => Err("Unexpected null for non-null column".into()),
-                        _ => unimplemented!(),
-                    }
-                }
-            }
-
-            impl Queryable<#diesel_type, Sqlite> for #enum_ {
-                type Row = Self;
-
-                fn build(row: Self::Row) -> Self {
-                    row
-                }
+            fn build(row: Self::Row) -> Self {
+                row
             }
         }
     }

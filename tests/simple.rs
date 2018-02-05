@@ -45,33 +45,7 @@ pub fn sqlite_connection() -> SqliteConnection {
 }
 
 #[test]
-fn sqlite_enum_round_trip() {
-    let data = vec![
-        Simple {
-            id: 1,
-            my_enum: MyEnum::Foo,
-        },
-        Simple {
-            id: 2,
-            my_enum: MyEnum::BazQuxx,
-        },
-    ];
-    let connection = sqlite_connection();
-    connection
-        .execute(r#"
-        CREATE TABLE test_simple (
-            id SERIAL PRIMARY KEY,
-            my_enum my_enum NOT NULL
-        );
-    "#).unwrap();
-    let ct = insert_into(test_simple::table)
-        .values(&data)
-        .execute(&connection).unwrap();
-    assert_eq!(data.len(), ct);
-}
-
-#[test]
-fn enum_round_trip() {
+fn pg_enum_round_trip() {
     let data = vec![
         Simple {
             id: 1,
@@ -109,6 +83,35 @@ fn enum_round_trip() {
         )
         .unwrap();
 }
+
+#[test]
+fn sqlite_enum_round_trip() {
+    let data = vec![
+        Simple {
+            id: 1,
+            my_enum: MyEnum::Foo,
+        },
+        Simple {
+            id: 2,
+            my_enum: MyEnum::BazQuxx,
+        },
+    ];
+    let connection = sqlite_connection();
+    connection
+        .execute(r#"
+        CREATE TABLE test_simple (
+            id SERIAL PRIMARY KEY,
+            my_enum my_enum NOT NULL
+        );
+    "#).unwrap();
+    let ct = insert_into(test_simple::table)
+        .values(&data)
+        .execute(&connection).unwrap();
+    assert_eq!(data.len(), ct);
+    let items = test_simple::table.load::<Simple>(&connection).unwrap();
+    assert_eq!(data, items);
+}
+
 
 // test snakey naming - should compile and not clobber above definitions
 // (but we won't actually bother round-tripping)
