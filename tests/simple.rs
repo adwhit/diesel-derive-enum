@@ -33,10 +33,41 @@ struct Simple {
     my_enum: MyEnum,
 }
 
-pub fn connection() -> PgConnection {
+pub fn pg_connection() -> PgConnection {
     let database_url =
         std::env::var("TEST_DATABASE_URL").expect("Env var TEST_DATABASE_URL not set");
     PgConnection::establish(&database_url).expect(&format!("Failed to connect to {}", database_url))
+}
+
+pub fn sqlite_connection() -> SqliteConnection {
+    let database_url = ":memory:";
+    SqliteConnection::establish(&database_url).expect(&format!("Failed to connect to {}", database_url))
+}
+
+#[test]
+fn sqlite_enum_round_trip() {
+    let data = vec![
+        Simple {
+            id: 1,
+            my_enum: MyEnum::Foo,
+        },
+        Simple {
+            id: 2,
+            my_enum: MyEnum::BazQuxx,
+        },
+    ];
+    let connection = sqlite_connection();
+    connection
+        .execute(r#"
+        CREATE TABLE test_simple (
+            id SERIAL PRIMARY KEY,
+            my_enum my_enum NOT NULL
+        );
+    "#).unwrap();
+    let ct = insert_into(test_simple::table)
+        .values(&data)
+        .execute(&connection).unwrap();
+    assert_eq!(data.len(), ct);
 }
 
 #[test]
@@ -51,7 +82,7 @@ fn enum_round_trip() {
             my_enum: MyEnum::BazQuxx,
         },
     ];
-    let connection = connection();
+    let connection = pg_connection();
     connection
         .batch_execute(
             r#"

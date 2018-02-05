@@ -76,13 +76,13 @@ fn pg_enum_impls(
             use diesel::Queryable;
             use diesel::expression::AsExpression;
             use diesel::expression::bound::Bound;
-            use diesel::pg::Pg;
             use diesel::row::Row;
             use diesel::sql_types::*;
             use diesel::serialize::{self, ToSql, IsNull, Output};
             use diesel::deserialize::{self, FromSqlRow};
             use std::io::Write;
 
+            use diesel::pg::Pg;
             pub struct #diesel_type;
 
             impl HasSqlType<#diesel_type> for Pg {
@@ -147,6 +147,41 @@ fn pg_enum_impls(
             }
 
             impl Queryable<#diesel_type, Pg> for #enum_ {
+                type Row = Self;
+
+                fn build(row: Self::Row) -> Self {
+                    row
+                }
+            }
+
+            use diesel::sqlite::Sqlite;
+
+            impl HasSqlType<#diesel_type> for Sqlite {
+                fn metadata(lookup: &Self::MetadataLookup) -> Self::TypeMetadata {
+                    diesel::sqlite::SqliteType::Text
+                }
+            }
+
+            impl ToSql<#diesel_type, Sqlite> for #enum_ {
+                fn to_sql<W: Write>(&self, out: &mut Output<W, Sqlite>) -> serialize::Result {
+                    match *self {
+                        #(#variants => out.write_all(#variants_pg)?,)*
+                    }
+                    Ok(IsNull::No)
+                }
+            }
+
+            impl FromSqlRow<#diesel_type, Sqlite> for #enum_ {
+                fn build_from_row<T: Row<Sqlite>>(row: &mut T) -> deserialize::Result<Self> {
+                    match row.take().map(|v| v.read_blob()) {
+                        #(Some(#variants_pg) => Ok(#variants),)*
+                        None => Err("Unexpected null for non-null column".into()),
+                        _ => unimplemented!(),
+                    }
+                }
+            }
+
+            impl Queryable<#diesel_type, Sqlite> for #enum_ {
                 type Row = Self;
 
                 fn build(row: Self::Row) -> Self {
