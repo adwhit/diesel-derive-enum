@@ -90,6 +90,7 @@ fn generate_derive_enum_impls(
 fn generate_common_impl(diesel_mapping: &Ident, enum_ty: &Ident) -> Tokens {
     quote! {
         use diesel::Queryable;
+        use diesel::backend::Backend;
         use diesel::expression::AsExpression;
         use diesel::expression::bound::Bound;
         use diesel::row::Row;
@@ -104,12 +105,11 @@ fn generate_common_impl(diesel_mapping: &Ident, enum_ty: &Ident) -> Tokens {
             type QueryId = #diesel_mapping;
             const HAS_STATIC_QUERY_ID: bool = true;
         }
-
         impl NotNull for #diesel_mapping {}
         impl SingleValue for #diesel_mapping {}
 
         impl AsExpression<#diesel_mapping> for #enum_ty {
-            type Expression = Bound<#diesel_mapping, #enum_ty>;
+            type Expression = Bound<#diesel_mapping, Self>;
 
             fn as_expression(self) -> Self::Expression {
                 Bound::new(self)
@@ -117,7 +117,7 @@ fn generate_common_impl(diesel_mapping: &Ident, enum_ty: &Ident) -> Tokens {
         }
 
         impl AsExpression<Nullable<#diesel_mapping>> for #enum_ty {
-            type Expression = Bound<Nullable<#diesel_mapping>, #enum_ty>;
+            type Expression = Bound<Nullable<#diesel_mapping>, Self>;
 
             fn as_expression(self) -> Self::Expression {
                 Bound::new(self)
@@ -125,7 +125,7 @@ fn generate_common_impl(diesel_mapping: &Ident, enum_ty: &Ident) -> Tokens {
         }
 
         impl<'a> AsExpression<#diesel_mapping> for &'a #enum_ty {
-            type Expression = Bound<#diesel_mapping, &'a #enum_ty>;
+            type Expression = Bound<#diesel_mapping, Self>;
 
             fn as_expression(self) -> Self::Expression {
                 Bound::new(self)
@@ -133,10 +133,36 @@ fn generate_common_impl(diesel_mapping: &Ident, enum_ty: &Ident) -> Tokens {
         }
 
         impl<'a> AsExpression<Nullable<#diesel_mapping>> for &'a #enum_ty {
-            type Expression = Bound<Nullable<#diesel_mapping>, &'a #enum_ty>;
+            type Expression = Bound<Nullable<#diesel_mapping>, Self>;
 
             fn as_expression(self) -> Self::Expression {
                 Bound::new(self)
+            }
+        }
+
+        impl<'a, 'b> AsExpression<#diesel_mapping> for &'a &'b #enum_ty {
+            type Expression = Bound<#diesel_mapping, Self>;
+
+            fn as_expression(self) -> Self::Expression {
+                Bound::new(self)
+            }
+        }
+
+        impl<'a, 'b> AsExpression<Nullable<#diesel_mapping>> for &'a &'b #enum_ty {
+            type Expression = Bound<Nullable<#diesel_mapping>, Self>;
+
+            fn as_expression(self) -> Self::Expression {
+                Bound::new(self)
+            }
+        }
+
+        impl<DB> ToSql<Nullable<#diesel_mapping>, DB> for #enum_ty
+        where
+            DB: Backend,
+            Self: ToSql<#diesel_mapping, DB>,
+        {
+            fn to_sql<W: ::std::io::Write>(&self, out: &mut Output<W, DB>) -> serialize::Result {
+                ToSql::<#diesel_mapping, DB>::to_sql(self, out)
             }
         }
     }
