@@ -84,7 +84,7 @@ See [this test](tests/simple.rs) for a full working example.
 `sqlite` is untyped. [Yes, really.](https://dba.stackexchange.com/questions/106364/text-string-stored-in-sqlite-integer-column). You can store any kind of data in any column and it won't complain. How do we get some nice static checking then? Well... you can't, really, but you can emulate it by add a `CHECK` to your column definition like so:
 
 ```sql
-CREATE TABLE test_simple (
+CREATE TABLE my_table (
     id SERIAL PRIMARY KEY,
     some_enum TEXT CHECK(my_enum IN ('foo', 'bar', 'baz_quxx')) NOT NULL
 );
