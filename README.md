@@ -5,8 +5,6 @@
 This crate allows one to automatically derive the Diesel boilerplate necessary
 to use Rust enums directly with `Postgres` and `sqlite` databases.
 
-It is a fairly literal translation of [this code](https://github.com/diesel-rs/diesel/blob/8f8dd92135a788c7d0f2c5202dcb4d05339a0cc1/diesel_tests/tests/custom_types.rs) from the Diesel test suite.
-
 v0.3+ requires Diesel 1.1+. For Diesel 1.0 use v0.2.2.
 
 ### Example usage (Postgres): 
