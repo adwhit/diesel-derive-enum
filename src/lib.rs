@@ -96,9 +96,15 @@ fn generate_common_impl(diesel_mapping: &Ident, enum_ty: &Ident) -> Tokens {
         use diesel::sql_types::*;
         use diesel::serialize::{self, ToSql, IsNull, Output};
         use diesel::deserialize::{self, FromSqlRow};
+        use diesel::query_builder::QueryId;
         use std::io::Write;
 
+
         pub struct #diesel_mapping;
+        impl QueryId for #diesel_mapping {
+            type QueryId = #diesel_mapping;
+            const HAS_STATIC_QUERY_ID: bool = true;
+        }
 
         impl NotNull for #diesel_mapping {}
         impl SingleValue for #diesel_mapping {}
