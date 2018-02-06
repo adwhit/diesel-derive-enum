@@ -96,6 +96,8 @@ fn nullable_enum_round_trip() {
 #[test]
 #[cfg(any(feature = "sqlite", feature = "postgres"))]
 fn not_nullable_enum_round_trip() {
+    // TODO this is one ugly hack (it stops us creating same table twice at once)
+    std::thread::sleep(std::time::Duration::from_secs(1));
     let connection = get_connection();
     create_table(&connection);
     let data = vec![
