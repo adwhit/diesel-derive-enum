@@ -9,7 +9,7 @@ extern crate diesel_derive_enum;
 use diesel::prelude::*;
 use diesel::insert_into;
 
-#[derive(Debug, PartialEq, DbEnum)]
+#[derive(Debug, PartialEq, DbEnum, Clone)]
 pub enum MyEnum {
     Foo,
     Bar,
@@ -25,20 +25,22 @@ table! {
     }
 }
 
-#[derive(Insertable, Queryable, Identifiable, Debug, PartialEq)]
+#[derive(Insertable, Queryable, Identifiable, Debug, Clone, PartialEq)]
 #[table_name = "test_simple"]
 struct Simple {
     id: i32,
     my_enum: MyEnum,
 }
 
-pub fn pg_connection() -> PgConnection {
+#[cfg(feature = "postgres")]
+pub fn get_connection() -> PgConnection {
     let database_url =
         std::env::var("TEST_DATABASE_URL").expect("Env var TEST_DATABASE_URL not set");
     PgConnection::establish(&database_url).expect(&format!("Failed to connect to {}", database_url))
 }
 
-pub fn sqlite_connection() -> SqliteConnection {
+#[cfg(feature = "sqlite")]
+pub fn get_connection() -> SqliteConnection {
     let database_url = ":memory:";
     SqliteConnection::establish(&database_url)
         .expect(&format!("Failed to connect to {}", database_url))
@@ -58,18 +60,22 @@ fn sample_data() -> Vec<Simple> {
             id: 33,
             my_enum: MyEnum::Bar,
         },
+        Simple {
+            id: 44,
+            my_enum: MyEnum::Foo,
+        },
+        Simple {
+            id: 555,
+            my_enum: MyEnum::Foo,
+        },
     ]
 }
 
-#[test]
 #[cfg(feature = "postgres")]
-fn pg_enum_round_trip() {
+fn create_table(conn: &PgConnection) {
     use diesel::connection::SimpleConnection;
-    let connection = pg_connection();
-    let data = sample_data();
-    connection
-        .batch_execute(
-            r#"
+    conn.batch_execute(
+        r#"
         DROP TYPE IF EXISTS my_enum;
         CREATE TYPE my_enum AS ENUM ('foo', 'bar', 'baz_quxx');
         CREATE TEMP TABLE IF NOT EXISTS test_simple (
@@ -77,29 +83,23 @@ fn pg_enum_round_trip() {
             my_enum my_enum NOT NULL
         );
     "#,
-        )
-        .unwrap();
-    let inserted = insert_into(test_simple::table)
-        .values(&data)
-        .get_results(&connection)
-        .unwrap();
-    assert_eq!(data, inserted);
-    connection
-        .batch_execute(
-            r#"
+    ).unwrap();
+}
+
+#[cfg(feature = "postgres")]
+fn drop_table(conn: &PgConnection) {
+    use diesel::connection::SimpleConnection;
+    conn.batch_execute(
+        r#"
             DROP TABLE test_simple;
             DROP TYPE my_enum;
          "#,
-        )
-        .unwrap();
+    ).unwrap();
 }
 
-#[test]
 #[cfg(feature = "sqlite")]
-fn sqlite_enum_round_trip() {
-    let connection = sqlite_connection();
-    let data = sample_data();
-    connection
+fn create_table(conn: &SqliteConnection) {
+    conn
         .execute(
             r#"
         CREATE TABLE test_simple (
@@ -109,6 +109,19 @@ fn sqlite_enum_round_trip() {
     "#,
         )
         .unwrap();
+}
+
+#[cfg(feature = "sqlite")]
+fn drop_table(_conn: &SqliteConnection) {
+    // no-op
+}
+
+#[test]
+#[cfg(any(feature = "sqlite", feature = "postgres"))]
+fn enum_round_trip() {
+    let connection = get_connection();
+    create_table(&connection);
+    let data = sample_data();
     let ct = insert_into(test_simple::table)
         .values(&data)
         .execute(&connection)
@@ -116,12 +129,48 @@ fn sqlite_enum_round_trip() {
     assert_eq!(data.len(), ct);
     let items = test_simple::table.load::<Simple>(&connection).unwrap();
     assert_eq!(data, items);
+    drop_table(&connection);
+}
+
+#[test]
+#[cfg(any(feature = "sqlite", feature = "postgres"))]
+fn filter_by_enum() {
+    use test_simple::dsl::*;
+    // TODO this is one ugly hack (it stops us creating same table twice at once)
+    std::thread::sleep(std::time::Duration::from_secs(1));
+    let connection = get_connection();
+    create_table(&connection);
+    let data = sample_data();
+    let ct = insert_into(test_simple)
+        .values(&data)
+        .execute(&connection)
+        .unwrap();
+    assert_eq!(data.len(), ct);
+    let results = test_simple
+        .filter(my_enum.eq(MyEnum::Foo))
+        .limit(2)
+        .load::<Simple>(&connection)
+        .unwrap();
+    assert_eq!(
+        results,
+        vec![
+            Simple {
+                id: 1,
+                my_enum: MyEnum::Foo,
+            },
+            Simple {
+                id: 44,
+                my_enum: MyEnum::Foo,
+            },
+        ]
+    );
+    drop_table(&connection);
 }
 
 #[test]
 #[cfg(feature = "sqlite")]
 fn sqlite_invalid_enum() {
-    let connection = sqlite_connection();
+    let connection = get_connection();
     let data = sample_data();
     connection
         .execute(
@@ -142,6 +191,7 @@ fn sqlite_invalid_enum() {
     } else {
         panic!("should have failed to insert")
     }
+    drop_table(&connection);
 }
 
 // test snakey naming - should compile and not clobber above definitions
