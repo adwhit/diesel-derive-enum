@@ -99,7 +99,6 @@ fn generate_common_impl(diesel_mapping: &Ident, enum_ty: &Ident) -> Tokens {
         use diesel::query_builder::QueryId;
         use std::io::Write;
 
-
         pub struct #diesel_mapping;
         impl QueryId for #diesel_mapping {
             type QueryId = #diesel_mapping;
@@ -205,6 +204,7 @@ fn generate_sqlite_impl(
         #sqlite_cfg
         mod sqlite_impl {
             use super::*;
+            use diesel;
             use diesel::sqlite::Sqlite;
 
             impl HasSqlType<#diesel_mapping> for Sqlite {
