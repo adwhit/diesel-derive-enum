@@ -11,7 +11,6 @@ v0.3+ requires Diesel 1.1+. For Diesel 1.0 use v0.2.2.
 
 ```toml
 # Cargo.toml
-
 [dependencies]
 diesel-derive-enum = { version = "0.4", features = ["postgres"] }
 ```
