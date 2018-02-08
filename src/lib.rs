@@ -72,7 +72,7 @@ fn generate_derive_enum_impls(
     let variants_rs: &[Tokens] = &variant_ids;
     let variants_db: &[Ident] = &variants_db;
 
-    let common_impl = generate_common_impl(diesel_mapping, enum_ty);
+    let common_impl = generate_common_impl(diesel_mapping, enum_ty, variants_rs, variants_db);
     let pg_impl =
         generate_postgres_impl(db_type, diesel_mapping, enum_ty, variants_rs, variants_db);
     let sqlite_impl = generate_sqlite_impl(diesel_mapping, enum_ty, variants_rs, variants_db);
@@ -87,7 +87,12 @@ fn generate_derive_enum_impls(
     }
 }
 
-fn generate_common_impl(diesel_mapping: &Ident, enum_ty: &Ident) -> Tokens {
+fn generate_common_impl(
+    diesel_mapping: &Ident,
+    enum_ty: &Ident,
+    variants_rs: &[Tokens],
+    variants_db: &[Ident],
+) -> Tokens {
     quote! {
         use diesel::Queryable;
         use diesel::backend::Backend;
@@ -156,6 +161,15 @@ fn generate_common_impl(diesel_mapping: &Ident, enum_ty: &Ident) -> Tokens {
             }
         }
 
+        impl<DB: Backend> ToSql<#diesel_mapping, DB> for #enum_ty {
+            fn to_sql<W: Write>(&self, out: &mut Output<W, DB>) -> serialize::Result {
+                match *self {
+                    #(#variants_rs => out.write_all(#variants_db)?,)*
+                }
+                Ok(IsNull::No)
+            }
+        }
+
         impl<DB> ToSql<Nullable<#diesel_mapping>, DB> for #enum_ty
         where
             DB: Backend,
@@ -185,15 +199,6 @@ fn generate_postgres_impl(
             impl HasSqlType<#diesel_mapping> for Pg {
                 fn metadata(lookup: &Self::MetadataLookup) -> Self::TypeMetadata {
                     lookup.lookup_type(#db_type)
-                }
-            }
-
-            impl ToSql<#diesel_mapping, Pg> for #enum_ty {
-                fn to_sql<W: Write>(&self, out: &mut Output<W, Pg>) -> serialize::Result {
-                    match *self {
-                        #(#variants_rs => out.write_all(#variants_db)?,)*
-                    }
-                    Ok(IsNull::No)
                 }
             }
 
@@ -236,15 +241,6 @@ fn generate_sqlite_impl(
             impl HasSqlType<#diesel_mapping> for Sqlite {
                 fn metadata(_lookup: &Self::MetadataLookup) -> Self::TypeMetadata {
                     diesel::sqlite::SqliteType::Text
-                }
-            }
-
-            impl ToSql<#diesel_mapping, Sqlite> for #enum_ty {
-                fn to_sql<W: Write>(&self, out: &mut Output<W, Sqlite>) -> serialize::Result {
-                    match *self {
-                        #(#variants_rs => out.write_all(#variants_db)?,)*
-                    }
-                    Ok(IsNull::No)
                 }
             }
 

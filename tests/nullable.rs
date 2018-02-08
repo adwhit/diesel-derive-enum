@@ -62,7 +62,6 @@ pub fn create_table(conn: &SqliteConnection) {
     ).unwrap();
 }
 
-
 #[cfg(feature = "postgres")]
 pub fn drop_table(conn: &PgConnection) {
     use diesel::connection::SimpleConnection;
@@ -80,8 +79,14 @@ fn nullable_enum_round_trip() {
     let connection = get_connection();
     create_table(&connection);
     let data = vec![
-        Nullable { id: 1, my_enum: None},
-        Nullable { id: 2, my_enum: Some(MyEnum::Bar)},
+        Nullable {
+            id: 1,
+            my_enum: None,
+        },
+        Nullable {
+            id: 2,
+            my_enum: Some(MyEnum::Bar),
+        },
     ];
     let ct = insert_into(test_nullable::table)
         .values(&data)
@@ -101,8 +106,14 @@ fn not_nullable_enum_round_trip() {
     let connection = get_connection();
     create_table(&connection);
     let data = vec![
-        MaybeNullable { id: 1, my_enum: MyEnum::Foo},
-        MaybeNullable { id: 2, my_enum: MyEnum::BazQuxx},
+        MaybeNullable {
+            id: 1,
+            my_enum: MyEnum::Foo,
+        },
+        MaybeNullable {
+            id: 2,
+            my_enum: MyEnum::BazQuxx,
+        },
     ];
     let ct = insert_into(test_nullable::table)
         .values(&data)
@@ -111,4 +122,3 @@ fn not_nullable_enum_round_trip() {
     assert_eq!(data.len(), ct);
     drop_table(&connection);
 }
-
