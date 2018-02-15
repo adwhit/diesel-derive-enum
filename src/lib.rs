@@ -73,9 +73,16 @@ fn generate_derive_enum_impls(
     let variants_db: &[Ident] = &variants_db;
 
     let common_impl = generate_common_impl(diesel_mapping, enum_ty, variants_rs, variants_db);
-    let pg_impl =
-        generate_postgres_impl(db_type, diesel_mapping, enum_ty, variants_rs, variants_db);
-    let sqlite_impl = generate_sqlite_impl(diesel_mapping, enum_ty, variants_rs, variants_db);
+    let pg_impl = if cfg!(feature = "postgres") {
+        generate_postgres_impl(db_type, diesel_mapping, enum_ty, variants_rs, variants_db)
+    } else {
+        quote!{}
+    };
+    let sqlite_impl = if cfg!(feature = "sqlite") {
+        generate_sqlite_impl(diesel_mapping, enum_ty, variants_rs, variants_db)
+    } else {
+        quote!{}
+    };
     quote! {
         pub use self::#modname::#diesel_mapping;
         #[allow(non_snake_case)]
@@ -189,9 +196,7 @@ fn generate_postgres_impl(
     variants_rs: &[Tokens],
     variants_db: &[Ident],
 ) -> Tokens {
-    let pg_cfg = Ident::new(r#"#[cfg(feature = "postgres")]"#);
     quote! {
-        #pg_cfg
         mod pg_impl {
             use super::*;
             use diesel::pg::Pg;
@@ -230,9 +235,7 @@ fn generate_sqlite_impl(
     variants_rs: &[Tokens],
     variants_db: &[Ident],
 ) -> Tokens {
-    let sqlite_cfg = Ident::new(r#"#[cfg(feature = "sqlite")]"#);
     quote! {
-        #sqlite_cfg
         mod sqlite_impl {
             use super::*;
             use diesel;
