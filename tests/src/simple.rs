@@ -1,15 +1,6 @@
-#![allow(non_camel_case_types)]
-#![allow(non_snake_case)]
-
-#[macro_use]
-pub extern crate diesel;
-#[macro_use]
-extern crate diesel_derive_enum;
-
 use diesel::prelude::*;
 use diesel::insert_into;
 
-mod common;
 use common::*;
 
 #[test]

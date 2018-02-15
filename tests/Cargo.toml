@@ -1,0 +1,8 @@
+[package]
+name = "tests"
+version = "0.1.0"
+authors = ["Alex Whitney <adwhit@fastmail.com>"]
+
+[dependencies]
+diesel = { version = "1.1", features = ["sqlite", "postgres"] }
+diesel-derive-enum = { path = "./..", features = ["sqlite", "postgres"] }

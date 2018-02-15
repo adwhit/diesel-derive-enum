@@ -1,16 +1,9 @@
-#![allow(non_camel_case_types)]
-#![allow(non_snake_case)]
-
-#[macro_use]
-pub extern crate diesel;
-#[macro_use]
-extern crate diesel_derive_enum;
-
 use diesel::prelude::*;
+use diesel::pg::PgConnection;
 
 pub fn connection() -> PgConnection {
     let database_url =
-        std::env::var("TEST_DATABASE_URL").expect("Env var TEST_DATABASE_URL not set");
+        ::std::env::var("TEST_DATABASE_URL").expect("Env var TEST_DATABASE_URL not set");
     PgConnection::establish(&database_url).expect(&format!("Failed to connect to {}", database_url))
 }
 
