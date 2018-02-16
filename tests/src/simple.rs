@@ -3,6 +3,7 @@ use diesel::insert_into;
 
 use common::*;
 
+#[test]
 #[cfg(any(feature = "sqlite", feature = "postgres"))]
 fn enum_round_trip() {
     let connection = get_connection();
@@ -15,9 +16,10 @@ fn enum_round_trip() {
     assert_eq!(data.len(), ct);
     let items = test_simple::table.load::<Simple>(&connection).unwrap();
     assert_eq!(data, items);
-    drop_table(&connection);
 }
 
+#[test]
+#[cfg(any(feature = "sqlite", feature = "postgres"))]
 fn filter_by_enum() {
     use common::test_simple::dsl::*;
     let connection = get_connection();
@@ -46,7 +48,6 @@ fn filter_by_enum() {
             },
         ]
     );
-    drop_table(&connection);
 }
 
 #[test]
@@ -73,7 +74,6 @@ fn sqlite_invalid_enum() {
     } else {
         panic!("should have failed to insert")
     }
-    drop_table(&connection);
 }
 
 // test snakey naming - should compile and not clobber above definitions
@@ -100,15 +100,4 @@ table! {
 struct test_snake {
     id: i32,
     my_enum: my_enum,
-}
-
-#[test]
-fn simple_tests() {
-    filter_by_enum();
-    enum_round_trip();
-
-    #[cfg(feature = "sqlite")]
-    {
-        sqlite_invalid_enum();
-    }
 }

@@ -1,11 +1,5 @@
 use diesel::prelude::*;
-use diesel::pg::PgConnection;
-
-pub fn connection() -> PgConnection {
-    let database_url =
-        ::std::env::var("TEST_DATABASE_URL").expect("Env var TEST_DATABASE_URL not set");
-    PgConnection::establish(&database_url).expect(&format!("Failed to connect to {}", database_url))
-}
+use common::get_connection;
 
 #[derive(Debug, PartialEq, DbEnum)]
 #[PgType = "Just_Whatever"]
@@ -47,13 +41,12 @@ fn rename_round_trip() {
             renamed: RenameMe::WithASpace,
         },
     ];
-    let connection = connection();
+    let connection = get_connection();
     connection
         .batch_execute(
             r#"
-        DROP TYPE IF EXISTS Just_Whatever;
         CREATE TYPE Just_Whatever AS ENUM ('mod', 'type', 'with spaces');
-        CREATE TEMP TABLE IF NOT EXISTS test_rename (
+        CREATE TABLE test_rename (
             id SERIAL PRIMARY KEY,
             renamed Just_Whatever NOT NULL
         );
@@ -65,12 +58,4 @@ fn rename_round_trip() {
         .get_results(&connection)
         .unwrap();
     assert_eq!(data, inserted);
-    connection
-        .batch_execute(
-            r#"
-            DROP TABLE test_rename;
-            DROP TYPE Just_Whatever;
-         "#,
-        )
-        .unwrap();
 }

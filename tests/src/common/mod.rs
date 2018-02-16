@@ -27,7 +27,9 @@ pub struct Simple {
 pub fn get_connection() -> PgConnection {
     let database_url =
         ::std::env::var("TEST_DATABASE_URL").expect("Env var TEST_DATABASE_URL not set");
-    PgConnection::establish(&database_url).expect(&format!("Failed to connect to {}", database_url))
+    let conn = PgConnection::establish(&database_url).expect(&format!("Failed to connect to {}", database_url));
+    conn.execute("SET search_path TO pg_temp;").unwrap();
+    conn
 }
 
 #[cfg(feature = "sqlite")]
@@ -67,24 +69,12 @@ pub fn create_table(conn: &PgConnection) {
     use diesel::connection::SimpleConnection;
     conn.batch_execute(
         r#"
-        DROP TYPE IF EXISTS my_enum;
         CREATE TYPE my_enum AS ENUM ('foo', 'bar', 'baz_quxx');
-        CREATE TEMP TABLE IF NOT EXISTS test_simple (
+        CREATE TABLE test_simple (
             id SERIAL PRIMARY KEY,
             my_enum my_enum NOT NULL
         );
     "#,
-    ).unwrap();
-}
-
-#[cfg(feature = "postgres")]
-pub fn drop_table(conn: &PgConnection) {
-    use diesel::connection::SimpleConnection;
-    conn.batch_execute(
-        r#"
-            DROP TABLE test_simple;
-            DROP TYPE my_enum;
-         "#,
     ).unwrap();
 }
 
@@ -98,9 +88,4 @@ pub fn create_table(conn: &SqliteConnection) {
         );
     "#,
     ).unwrap();
-}
-
-#[cfg(feature = "sqlite")]
-pub fn drop_table(_conn: &SqliteConnection) {
-    // no-op
 }

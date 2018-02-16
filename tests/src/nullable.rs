@@ -12,6 +12,8 @@ table! {
     }
 }
 
+
+
 #[derive(Insertable, Queryable, Identifiable, Debug, PartialEq)]
 #[table_name = "test_nullable"]
 struct Nullable {
@@ -27,7 +29,7 @@ struct MaybeNullable {
 }
 
 #[cfg(feature = "postgres")]
-pub fn create_table(conn: &PgConnection) {
+pub fn create_null_table(conn: &PgConnection) {
     use diesel::connection::SimpleConnection;
     conn.batch_execute(
         r#"
@@ -42,7 +44,7 @@ pub fn create_table(conn: &PgConnection) {
 }
 
 #[cfg(feature = "sqlite")]
-pub fn create_table(conn: &SqliteConnection) {
+pub fn create_null_table(conn: &SqliteConnection) {
     conn.execute(
         r#"
         CREATE TABLE test_nullable (
@@ -53,20 +55,10 @@ pub fn create_table(conn: &SqliteConnection) {
     ).unwrap();
 }
 
-#[cfg(feature = "postgres")]
-pub fn drop_table(conn: &PgConnection) {
-    use diesel::connection::SimpleConnection;
-    conn.batch_execute(
-        r#"
-            DROP TABLE test_nullable;
-            DROP TYPE my_enum;
-         "#,
-    ).unwrap();
-}
-
+#[test]
 fn nullable_enum_round_trip() {
     let connection = get_connection();
-    create_table(&connection);
+    create_null_table(&connection);
     let data = vec![
         Nullable {
             id: 1,
@@ -77,19 +69,19 @@ fn nullable_enum_round_trip() {
             my_enum: Some(MyEnum::Bar),
         },
     ];
-    let ct = insert_into(test_nullable::table)
-        .values(&data)
-        .execute(&connection)
+    let sql = insert_into(test_nullable::table)
+        .values(&data);
+    let ct = sql.execute(&connection)
         .unwrap();
     assert_eq!(data.len(), ct);
     let items = test_nullable::table.load::<Nullable>(&connection).unwrap();
     assert_eq!(data, items);
-    drop_table(&connection);
 }
 
+#[test]
 fn not_nullable_enum_round_trip() {
     let connection = get_connection();
-    create_table(&connection);
+    create_null_table(&connection);
     let data = vec![
         MaybeNullable {
             id: 1,
@@ -105,12 +97,4 @@ fn not_nullable_enum_round_trip() {
         .execute(&connection)
         .unwrap();
     assert_eq!(data.len(), ct);
-    drop_table(&connection);
-}
-
-#[test]
-#[cfg(any(feature = "sqlite", feature = "postgres"))]
-fn nullable_tests() {
-    nullable_enum_round_trip();
-    not_nullable_enum_round_trip();
 }
