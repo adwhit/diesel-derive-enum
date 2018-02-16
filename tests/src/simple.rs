@@ -3,7 +3,6 @@ use diesel::insert_into;
 
 use common::*;
 
-#[test]
 #[cfg(any(feature = "sqlite", feature = "postgres"))]
 fn enum_round_trip() {
     let connection = get_connection();
@@ -19,12 +18,8 @@ fn enum_round_trip() {
     drop_table(&connection);
 }
 
-#[test]
-#[cfg(any(feature = "sqlite", feature = "postgres"))]
 fn filter_by_enum() {
-    use test_simple::dsl::*;
-    // TODO this is one ugly hack (it stops us creating same table twice at once)
-    std::thread::sleep(std::time::Duration::from_secs(1));
+    use common::test_simple::dsl::*;
     let connection = get_connection();
     create_table(&connection);
     let data = sample_data();
@@ -105,4 +100,15 @@ table! {
 struct test_snake {
     id: i32,
     my_enum: my_enum,
+}
+
+#[test]
+fn simple_tests() {
+    filter_by_enum();
+    enum_round_trip();
+
+    #[cfg(feature = "sqlite")]
+    {
+        sqlite_invalid_enum();
+    }
 }

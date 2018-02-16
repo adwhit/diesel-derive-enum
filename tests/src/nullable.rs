@@ -64,8 +64,6 @@ pub fn drop_table(conn: &PgConnection) {
     ).unwrap();
 }
 
-#[test]
-#[cfg(any(feature = "sqlite", feature = "postgres"))]
 fn nullable_enum_round_trip() {
     let connection = get_connection();
     create_table(&connection);
@@ -89,11 +87,7 @@ fn nullable_enum_round_trip() {
     drop_table(&connection);
 }
 
-#[test]
-#[cfg(any(feature = "sqlite", feature = "postgres"))]
 fn not_nullable_enum_round_trip() {
-    // TODO this is one ugly hack (it stops us creating same table twice at once)
-    std::thread::sleep(std::time::Duration::from_secs(1));
     let connection = get_connection();
     create_table(&connection);
     let data = vec![
@@ -112,4 +106,11 @@ fn not_nullable_enum_round_trip() {
         .unwrap();
     assert_eq!(data.len(), ct);
     drop_table(&connection);
+}
+
+#[test]
+#[cfg(any(feature = "sqlite", feature = "postgres"))]
+fn nullable_tests() {
+    nullable_enum_round_trip();
+    not_nullable_enum_round_trip();
 }
