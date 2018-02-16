@@ -9,5 +9,5 @@ env:
   TEST_DATABASE_URL=postgres://postgres@localhost:5432
 script:
   - cargo build --verbose --all
-  - cargo test --features="sqlite"
-  - cargo test --features="postgres"
+  - cargo test --manifest-path=tests/Cargo.toml --features="sqlite"
+  - cargo test --manifest-path=tests/Cargo.toml --features="postgres"
