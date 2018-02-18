@@ -4,7 +4,7 @@ use diesel::insert_into;
 use common::*;
 
 #[test]
-#[cfg(any(feature = "sqlite", feature = "postgres"))]
+#[cfg(any(feature = "sqlite", feature = "postgres", feature = "mysql"))]
 fn enum_round_trip() {
     let connection = get_connection();
     create_table(&connection);
@@ -19,7 +19,7 @@ fn enum_round_trip() {
 }
 
 #[test]
-#[cfg(any(feature = "sqlite", feature = "postgres"))]
+#[cfg(any(feature = "sqlite", feature = "postgres", feature = "mysql"))]
 fn filter_by_enum() {
     use common::test_simple::dsl::*;
     let connection = get_connection();

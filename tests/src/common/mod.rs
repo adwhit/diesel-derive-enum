@@ -26,10 +26,19 @@ pub struct Simple {
 #[cfg(feature = "postgres")]
 pub fn get_connection() -> PgConnection {
     let database_url =
-        ::std::env::var("TEST_DATABASE_URL").expect("Env var TEST_DATABASE_URL not set");
-    let conn = PgConnection::establish(&database_url).expect(&format!("Failed to connect to {}", database_url));
+        ::std::env::var("PG_TEST_DATABASE_URL").expect("Env var PG_TEST_DATABASE_URL not set");
+    let conn = PgConnection::establish(&database_url)
+        .expect(&format!("Failed to connect to {}", database_url));
     conn.execute("SET search_path TO pg_temp;").unwrap();
     conn
+}
+
+#[cfg(feature = "mysql")]
+pub fn get_connection() -> MysqlConnection {
+    let database_url = ::std::env::var("MYSQL_TEST_DATABASE_URL")
+        .expect("Env var MYSQL_TEST_DATABASE_URL not set");
+    MysqlConnection::establish(&database_url)
+        .expect(&format!("Failed to connect to {}", database_url))
 }
 
 #[cfg(feature = "sqlite")]
@@ -73,6 +82,19 @@ pub fn create_table(conn: &PgConnection) {
         CREATE TABLE test_simple (
             id SERIAL PRIMARY KEY,
             my_enum my_enum NOT NULL
+        );
+    "#,
+    ).unwrap();
+}
+
+#[cfg(feature = "mysql")]
+pub fn create_table(conn: &MysqlConnection) {
+    use diesel::connection::SimpleConnection;
+    conn.batch_execute(
+        r#"
+        CREATE TEMPORARY TABLE IF NOT EXISTS test_simple (
+            id SERIAL PRIMARY KEY,
+            my_enum enum('foo', 'bar', 'baz_quxx') NOT NULL
         );
     "#,
     ).unwrap();

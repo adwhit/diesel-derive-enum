@@ -12,8 +12,6 @@ table! {
     }
 }
 
-
-
 #[derive(Insertable, Queryable, Identifiable, Debug, PartialEq)]
 #[table_name = "test_nullable"]
 struct Nullable {
@@ -38,6 +36,19 @@ pub fn create_null_table(conn: &PgConnection) {
         CREATE TEMP TABLE IF NOT EXISTS test_nullable (
             id SERIAL PRIMARY KEY,
             my_enum my_enum
+        );
+    "#,
+    ).unwrap();
+}
+
+#[cfg(feature = "mysql")]
+pub fn create_null_table(conn: &MysqlConnection) {
+    use diesel::connection::SimpleConnection;
+    conn.batch_execute(
+        r#"
+        CREATE TEMPORARY TABLE IF NOT EXISTS test_nullable (
+            id SERIAL PRIMARY KEY,
+            my_enum enum ('foo', 'bar', 'baz_quxx')
         );
     "#,
     ).unwrap();
@@ -69,10 +80,8 @@ fn nullable_enum_round_trip() {
             my_enum: Some(MyEnum::Bar),
         },
     ];
-    let sql = insert_into(test_nullable::table)
-        .values(&data);
-    let ct = sql.execute(&connection)
-        .unwrap();
+    let sql = insert_into(test_nullable::table).values(&data);
+    let ct = sql.execute(&connection).unwrap();
     assert_eq!(data.len(), ct);
     let items = test_nullable::table.load::<Nullable>(&connection).unwrap();
     assert_eq!(data, items);
