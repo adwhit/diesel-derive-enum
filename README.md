@@ -3,11 +3,11 @@
 [![Build Status](https://travis-ci.org/adwhit/diesel-derive-enum.svg?branch=master)](https://travis-ci.org/adwhit/diesel-derive-enum)
 
 This crate allows one to automatically derive the Diesel boilerplate necessary
-to use Rust enums directly with `Postgres` and `sqlite` databases.
+to use Rust enums directly with `PostgreSQL` `MySQL` and `sqlite` databases.
 
-v0.3+ requires Diesel 1.1+. For Diesel 1.0 use v0.2.2.
+Requires diesel v1.1+.
 
-### Example usage (Postgres): 
+### Example usage:
 
 ```toml
 # Cargo.toml
@@ -16,7 +16,6 @@ diesel-derive-enum = { version = "0.4", features = ["postgres"] }
 ```
 
 ```rust
-
 // define your enum
 #[derive(DbEnum)]
 pub enum MyEnum {
@@ -46,6 +45,7 @@ struct  MyRow {
 
 SQL to create corresponding table:
 
+Postgres-
 ```sql
 -- by default the postgres ENUM values correspond to snake_cased Rust enum variant names
 CREATE TYPE my_enum AS ENUM ('foo', 'bar', 'baz_quxx');
@@ -53,6 +53,20 @@ CREATE TYPE my_enum AS ENUM ('foo', 'bar', 'baz_quxx');
 CREATE TABLE my_table (
   id SERIAL PRIMARY KEY,
   some_enum my_enum NOT NULL
+);
+```
+MySQL-
+```sql
+CREATE TABLE my_table (
+    id SERIAL PRIMARY KEY,
+    my_enum enum('foo', 'bar', 'baz_quxx') NOT NULL
+);
+```
+sqlite-
+```sql
+CREATE TABLE my_table (
+    id SERIAL PRIMARY KEY,
+    my_enum TEXT CHECK(my_enum IN ('foo', 'bar', 'baz_quxx')) NOT NULL
 );
 ```
 
@@ -77,32 +91,24 @@ let inserted = insert_into(my_table::table)
 assert_eq!(data, inserted);
 ```
 
-See [this test](tests/simple.rs) for a full working example.
+See the [tests](tests/) folder for full working examples.
 
-### sqlite
+## Enums Explained
 
-`sqlite` is untyped. [Yes, really.](https://dba.stackexchange.com/questions/106364/text-string-stored-in-sqlite-integer-column). You can store any kind of data in any column and it won't complain. How do we get some nice static checking then? Well... you can't, really, but you can emulate it by add a `CHECK` to your column definition like so:
+Enums work slightly differently in each of the three databases.
+* In Postgres, one declares an enum as a separate type within a schema, which may then be used in multiple tables. Internally, an enum value is encoded as an int (four bytes) and stored inline within a row, so gives a much more efficient representation than a string.
+* MySQL is similar except the enum is not declared as a separate type and is 'local' to it's parent table. It is encoded as either one or two bytes.
+* sqlite on the other hand does not really have enums - in fact, it does not really have types. [Yes, really.](https://dba.stackexchange.com/questions/106364/text-string-stored-in-sqlite-integer-column) You can store any kind of data in any column and it won't complain. Instead we emulate static checking by adding the `CHECK` command, as per above. This does not give a more compact encoding but does ensure data consistency. Note that if you somehow attempt to retreive some other invalid text as an enum, `diesel` will error at the point of deserialization. (Trivia: the `TEXT` type annotation isn't actually used by sqlite and you could substitute `my_enum` in it's place and it would still work. It wouldn't gain you anything though.)
 
-```sql
-CREATE TABLE my_table (
-    id SERIAL PRIMARY KEY,
-    some_enum TEXT CHECK(my_enum IN ('foo', 'bar', 'baz_quxx')) NOT NULL
-);
-```
-
-If you substitute this snippet into the above example, all will be well (and make sure to edit your `Cargo.toml` to include `features = ["sqlite"]`). Trivia: the `TEXT` type annotation isn't even frickin used and you could substitute `MY_FAVOURITE_SHINY_TYPE` in it's place and it would still work.
-
-Note that it will still be possible to insert other strings (or whatever) into the column 'by hand', though it will be a type error should you attempt to do so through `diesel`. If you attempt to retreive some other invalid text as an enum, `diesel` will error at the point of deserialization.
-
-### What's up with the naming?
+## Type renaming
 
 Diesel maintains a set of internal types which correspond one-to-one to the types available in various relational databases. Each internal type then maps to some kind of Rust native type. e.g. `diesel::types::Integer` maps to `i32`. So, when we create a new type in Postgres with `CREATE TYPE ...`, we must also create a corresponding type in Diesel, and then create a mapping to some native Rust type (our enum). Hence there are three types we need to be aware of.
 
 By default, the Postgres and Diesel internal types are inferred from the name of the Rust enum. Specifically, we assume `MyEnum` corresponds to `my_enum` in Postgres and `MyEnumMapping` in Diesel. (The Diesel type is created by the plugin, the Postgres type must be created in SQL).
 
-These defaults can be overridden with the attributes `#[PgType = "..."]` and `#[DieselType = "..."]`. (The `PgType` annotation has no effect on `sqlite`).
+These defaults can be overridden with the attributes `#[PgType = "..."]` and `#[DieselType = "..."]`. (The `PgType` annotation has no effect on `MySQL` or `sqlite`).
 
-Similarly, we assume that the Postgres ENUM variants are simply the Rust enum variants translated to `snake_case`. These can be renamed with the inline annotation `#[pg_rename = "..."]`.
+Similarly, we assume that the possible ENUM variants are simply the Rust enum variants translated to `snake_case`. These can be renamed with the inline annotation `#[db_rename = "..."]`.
 
 See [this test](tests/rename.rs) for an example of renaming.
 
@@ -110,7 +116,7 @@ See [this test](tests/rename.rs) for an example of renaming.
 
 The `print-schema` command (from `diesel_cli`) attempts to connect to an existing DB and generate a correct mapping of Postgres columns to Diesel internal types. If a custom ENUM exists in the database, Diesel will simply assume that the internal mapping type is the ENUM name, Title-cased (e.g. `my_enum` -> `My_enum`). Therefore the derived mapping name must also be corrected with the `DieselType` attribute e.g. `#[DieselType] = "My_enum"]`.
 
-The `infer_schema!` macro works similarly but unfortunately is not yet compatible with this crate.
+Unfortunately the `infer_schema!` is not yet compatible with this crate.
 
 ### License
 

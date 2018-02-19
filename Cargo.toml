@@ -1,6 +1,6 @@
 [package]
 name = "diesel-derive-enum"
-version = "0.4.2"
+version = "0.4.3"
 description = "Derive diesel boilerplate for using enums in databases"
 authors = ["Alex Whitney <adwhit@fastmail.com>"]
 repository = "http://github.com/adwhit/diesel-derive-enum"
