@@ -5,7 +5,7 @@ description = "Derive diesel boilerplate for using enums in databases"
 authors = ["Alex Whitney <adwhit@fastmail.com>"]
 repository = "http://github.com/adwhit/diesel-derive-enum"
 homepage = "http://github.com/adwhit/diesel-derive-enum"
-keywords = ["diesel", "postgres", "sqlite", "sql", "derive"]
+keywords = ["diesel", "postgres", "sqlite", "mysql", "sql", "derive"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
 
