@@ -4,10 +4,10 @@ version = "0.1.0"
 authors = ["Alex Whitney <adwhit@fastmail.com>"]
 
 [dependencies]
-diesel = { version = "1.1", features = ["sqlite", "postgres"] }
-diesel-derive-enum = { path = "./..", features = ["sqlite", "postgres"] }
+diesel = { version = "1.1", features = ["sqlite", "postgres", "mysql"] }
+diesel-derive-enum = { path = "./..", features = ["sqlite", "postgres", "mysql"] }
 
 [features]
-
 postgres = []
 sqlite = []
+mysql = []

@@ -78,6 +78,11 @@ fn generate_derive_enum_impls(
     } else {
         quote!{}
     };
+    let mysql_impl = if cfg!(feature = "mysql") {
+        generate_mysql_impl(diesel_mapping, enum_ty, variants_rs, variants_db)
+    } else {
+        quote!{}
+    };
     let sqlite_impl = if cfg!(feature = "sqlite") {
         generate_sqlite_impl(diesel_mapping, enum_ty, variants_rs, variants_db)
     } else {
@@ -89,6 +94,7 @@ fn generate_derive_enum_impls(
         mod #modname {
             #common_impl
             #pg_impl
+            #mysql_impl
             #sqlite_impl
         }
     }
@@ -219,6 +225,46 @@ fn generate_postgres_impl(
             }
 
             impl Queryable<#diesel_mapping, Pg> for #enum_ty {
+                type Row = Self;
+
+                fn build(row: Self::Row) -> Self {
+                    row
+                }
+            }
+        }
+    }
+}
+
+fn generate_mysql_impl(
+    diesel_mapping: &Ident,
+    enum_ty: &Ident,
+    variants_rs: &[Tokens],
+    variants_db: &[Ident],
+) -> Tokens {
+    quote! {
+        mod mysql_impl {
+            use super::*;
+            use diesel;
+            use diesel::mysql::Mysql;
+
+            impl HasSqlType<#diesel_mapping> for Mysql {
+                fn metadata(_lookup: &Self::MetadataLookup) -> Self::TypeMetadata {
+                    diesel::mysql::MysqlType::String
+                }
+            }
+
+            impl FromSqlRow<#diesel_mapping, Mysql> for #enum_ty {
+                fn build_from_row<T: Row<Mysql>>(row: &mut T) -> deserialize::Result<Self> {
+                    match row.take() {
+                        #(Some(#variants_db) => Ok(#variants_rs),)*
+                        Some(v) => Err(format!("Unrecognized enum variant: '{}'",
+                                               String::from_utf8_lossy(v)).into()),
+                        None => Err("Unexpected null for non-null column".into()),
+                    }
+                }
+            }
+
+            impl Queryable<#diesel_mapping, Mysql> for #enum_ty {
                 type Row = Self;
 
                 fn build(row: Self::Row) -> Self {

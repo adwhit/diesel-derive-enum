@@ -5,8 +5,13 @@ rust:
   - nightly
 services:
   - postgresql
+  - mysql
+before_install:
+  - mysql -e 'CREATE DATABASE IF NOT EXISTS mysql_test;'
 env:
-  TEST_DATABASE_URL=postgres://postgres@localhost:5432
+  PG_TEST_DATABASE_URL=postgres://postgres@localhost:5432
+  MYSQL_TEST_DATABASE_URL=mysql://travis@localhost:3306/mysql_test
 script:
   - cargo test --manifest-path=tests/Cargo.toml --features="sqlite"
   - RUST_TEST_THREADS=1 cargo test --manifest-path=tests/Cargo.toml --features="postgres"
+  - RUST_TEST_THREADS=1 cargo test --manifest-path=tests/Cargo.toml --features="mysql"

@@ -5,9 +5,12 @@ use common::get_connection;
 #[PgType = "Just_Whatever"]
 #[DieselType = "Some_Ugly_Renaming"]
 pub enum RenameMe {
-    #[db_rename = "mod"] Mod,
-    #[db_rename = "type"] typo,
-    #[db_rename = "with spaces"] WithASpace,
+    #[db_rename = "mod"]
+    Mod,
+    #[db_rename = "type"]
+    typo,
+    #[db_rename = "with spaces"]
+    WithASpace,
 }
 
 table! {
@@ -57,5 +60,39 @@ fn rename_round_trip() {
         .values(&data)
         .get_results(&connection)
         .unwrap();
+    assert_eq!(data, inserted);
+}
+
+#[test]
+#[cfg(feature = "mysql")]
+fn rename_round_trip() {
+    use diesel::connection::SimpleConnection;
+    use diesel::insert_into;
+    let data = vec![
+        TestRename {
+            id: 1,
+            renamed: RenameMe::Mod,
+        },
+        TestRename {
+            id: 2,
+            renamed: RenameMe::WithASpace,
+        },
+    ];
+    let connection = get_connection();
+    connection
+        .batch_execute(
+            r#"
+        CREATE TEMPORARY TABLE IF NOT EXISTS test_rename (
+            id SERIAL PRIMARY KEY,
+            renamed enum('mod', 'type', 'with spaces') NOT NULL
+        );
+    "#,
+        )
+        .unwrap();
+    insert_into(test_rename::table)
+        .values(&data)
+        .execute(&connection)
+        .unwrap();
+    let inserted = test_rename::table.load::<TestRename>(&connection).unwrap();
     assert_eq!(data, inserted);
 }
