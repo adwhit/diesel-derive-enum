@@ -111,7 +111,7 @@ These defaults can be overridden with the attributes `#[PgType = "..."]` and `#[
 
 Similarly, we assume that the possible ENUM variants are simply the Rust enum variants translated to `snake_case`. These can be renamed with the inline annotation `#[db_rename = "..."]`.
 
-See [this test](tests/rename.rs) for an example of renaming.
+See [this test](tests/src/rename.rs) for an example of renaming.
 
 #### `print-schema` and `infer-schema!`
 
