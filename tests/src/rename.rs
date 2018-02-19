@@ -96,7 +96,3 @@ fn rename_round_trip() {
     let inserted = test_rename::table.load::<TestRename>(&connection).unwrap();
     assert_eq!(data, inserted);
 }
-
-use diesel;
-
-no_arg_sql_function!(last_insert_id, diesel::types::Bigint);
