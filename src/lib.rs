@@ -6,10 +6,10 @@ extern crate proc_macro;
 extern crate quote;
 extern crate syn;
 
+use heck::SnakeCase;
 use proc_macro::TokenStream;
 use quote::Tokens;
 use syn::*;
-use heck::SnakeCase;
 
 #[proc_macro_derive(DbEnum, attributes(PgType, DieselType, db_rename))]
 pub fn derive(input: TokenStream) -> TokenStream {
@@ -114,7 +114,7 @@ fn generate_common_impl(
         use diesel::row::Row;
         use diesel::sql_types::*;
         use diesel::serialize::{self, ToSql, IsNull, Output};
-        use diesel::deserialize::{self, FromSqlRow};
+        use diesel::deserialize::{self, FromSql, FromSqlRow};
         use diesel::query_builder::QueryId;
         use std::io::Write;
 
@@ -224,6 +224,17 @@ fn generate_postgres_impl(
                 }
             }
 
+            impl FromSql<#diesel_mapping, Pg> for #enum_ty {
+                fn from_sql(bytes: Option<&<Pg as Backend>::RawValue>) -> deserialize::Result<Self> {
+                    match bytes {
+                        #(Some(#variants_db) => Ok(#variants_rs),)*
+                        Some(v) => Err(format!("Unrecognized enum variant: '{}'",
+                                               String::from_utf8_lossy(v)).into()),
+                        None => Err("Unexpected null for non-null column".into()),
+                    }
+                }
+            }
+
             impl Queryable<#diesel_mapping, Pg> for #enum_ty {
                 type Row = Self;
 
@@ -264,6 +275,17 @@ fn generate_mysql_impl(
                 }
             }
 
+            impl FromSql<#diesel_mapping, Mysql> for #enum_ty {
+                fn from_sql(bytes: Option<&<Mysql as Backend>::RawValue>) -> deserialize::Result<Self> {
+                    match bytes {
+                        #(Some(#variants_db) => Ok(#variants_rs),)*
+                        Some(v) => Err(format!("Unrecognized enum variant: '{}'",
+                                               String::from_utf8_lossy(v)).into()),
+                        None => Err("Unexpected null for non-null column".into()),
+                    }
+                }
+            }
+
             impl Queryable<#diesel_mapping, Mysql> for #enum_ty {
                 type Row = Self;
 
@@ -296,6 +318,16 @@ fn generate_sqlite_impl(
             impl FromSqlRow<#diesel_mapping, Sqlite> for #enum_ty {
                 fn build_from_row<T: Row<Sqlite>>(row: &mut T) -> deserialize::Result<Self> {
                     match row.take().map(|v| v.read_blob()) {
+                        #(Some(#variants_db) => Ok(#variants_rs),)*
+                        Some(blob) => Err(format!("Unexpected variant: {}", String::from_utf8_lossy(blob)).into()),
+                        None => Err("Unexpected null for non-null column".into()),
+                    }
+                }
+            }
+
+            impl FromSql<#diesel_mapping, Sqlite> for #enum_ty {
+                fn from_sql(bytes: Option<&<Sqlite as Backend>::RawValue>) -> deserialize::Result<Self> {
+                    match bytes.map(|v| v.read_blob()) {
                         #(Some(#variants_db) => Ok(#variants_rs),)*
                         Some(blob) => Err(format!("Unexpected variant: {}", String::from_utf8_lossy(blob)).into()),
                         None => Err("Unexpected null for non-null column".into()),
