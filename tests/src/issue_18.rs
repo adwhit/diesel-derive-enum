@@ -11,7 +11,7 @@ pub fn create_table(conn: &PgConnection) {
         CREATE TYPE my_enum AS ENUM ('foo', 'bar', 'baz_quxx');
         CREATE TABLE test_array (
             id SERIAL PRIMARY KEY,
-            my_enum my_enum[] NOT NULL
+            my_enum_arr my_enum[] NOT NULL
         );
     "#,
     ).unwrap();
