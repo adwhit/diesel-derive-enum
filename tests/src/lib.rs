@@ -9,6 +9,7 @@ extern crate diesel;
 extern crate diesel_derive_enum;
 
 mod common;
-mod simple;
-mod rename;
+mod issue_18;
 mod nullable;
+mod rename;
+mod simple;
