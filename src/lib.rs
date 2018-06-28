@@ -215,12 +215,7 @@ fn generate_postgres_impl(
 
             impl FromSqlRow<#diesel_mapping, Pg> for #enum_ty {
                 fn build_from_row<T: Row<Pg>>(row: &mut T) -> deserialize::Result<Self> {
-                    match row.take() {
-                        #(Some(#variants_db) => Ok(#variants_rs),)*
-                        Some(v) => Err(format!("Unrecognized enum variant: '{}'",
-                                               String::from_utf8_lossy(v)).into()),
-                        None => Err("Unexpected null for non-null column".into()),
-                    }
+                    FromSql::<#diesel_mapping, Pg>::from_sql(row.take())
                 }
             }
 
@@ -266,12 +261,7 @@ fn generate_mysql_impl(
 
             impl FromSqlRow<#diesel_mapping, Mysql> for #enum_ty {
                 fn build_from_row<T: Row<Mysql>>(row: &mut T) -> deserialize::Result<Self> {
-                    match row.take() {
-                        #(Some(#variants_db) => Ok(#variants_rs),)*
-                        Some(v) => Err(format!("Unrecognized enum variant: '{}'",
-                                               String::from_utf8_lossy(v)).into()),
-                        None => Err("Unexpected null for non-null column".into()),
-                    }
+                    FromSql::<#diesel_mapping, Mysql>::from_sql(row.take())
                 }
             }
 
@@ -317,11 +307,7 @@ fn generate_sqlite_impl(
 
             impl FromSqlRow<#diesel_mapping, Sqlite> for #enum_ty {
                 fn build_from_row<T: Row<Sqlite>>(row: &mut T) -> deserialize::Result<Self> {
-                    match row.take().map(|v| v.read_blob()) {
-                        #(Some(#variants_db) => Ok(#variants_rs),)*
-                        Some(blob) => Err(format!("Unexpected variant: {}", String::from_utf8_lossy(blob)).into()),
-                        None => Err("Unexpected null for non-null column".into()),
-                    }
+                    FromSql::<#diesel_mapping, Sqlite>::from_sql(row.take())
                 }
             }
 
