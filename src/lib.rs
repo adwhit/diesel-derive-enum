@@ -107,6 +107,7 @@ fn generate_common_impl(
     variants_db: &[Ident],
 ) -> Tokens {
     quote! {
+        use super::*;
         use diesel::Queryable;
         use diesel::backend::Backend;
         use diesel::expression::AsExpression;
