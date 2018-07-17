@@ -2,7 +2,7 @@
 [![crates.io](https://img.shields.io/crates/v/diesel-derive-enum.svg)](https://crates.io/crates/diesel-derive-enum)
 [![Build Status](https://travis-ci.org/adwhit/diesel-derive-enum.svg?branch=master)](https://travis-ci.org/adwhit/diesel-derive-enum)
 
-This crate allows one to automatically derive the Diesel boilerplate necessary
+This crate automatically derives the Diesel boilerplate necessary
 to use Rust enums directly with `PostgreSQL`, `MySQL` and `sqlite` databases.
 
 Requires diesel v1.1+.
@@ -92,14 +92,14 @@ let inserted = insert_into(my_table::table)
 assert_eq!(data, inserted);
 ```
 
-See the [tests](tests/) folder for full working examples.
+Postgres arrays work too! See [this example.](tests/src/pg_array.rs)
 
 ### Enums Explained
 
 Enums work slightly differently in each of the three databases.
-* In Postgres, one declares an enum as a separate type within a schema, which may then be used in multiple tables. Internally, an enum value is encoded as an int (four bytes) and stored inline within a row, so gives a much more efficient representation than a string.
+* In Postgres, one declares an enum as a separate type within a schema, which may then be used in multiple tables. Internally, an enum value is encoded as an int (four bytes) and stored inline within a row - a much more efficient representation than a string.
 * MySQL is similar except the enum is not declared as a separate type and is 'local' to it's parent table. It is encoded as either one or two bytes.
-* sqlite on the other hand does not really have enums - in fact, it does not really have types. [Yes, really.](https://dba.stackexchange.com/questions/106364/text-string-stored-in-sqlite-integer-column) You can store any kind of data in any column and it won't complain. Instead we emulate static checking by adding the `CHECK` command, as per above. This does not give a more compact encoding but does ensure data consistency. Note that if you somehow attempt to retreive some other invalid text as an enum, `diesel` will error at the point of deserialization. (Trivia: the `TEXT` type annotation isn't actually used by sqlite and you could substitute `my_enum` in it's place and it would still work. It wouldn't gain you anything though.)
+* sqlite on the other hand does not really have enums - in fact, it does [not really have types](https://dba.stackexchange.com/questions/106364/text-string-stored-in-sqlite-integer-column); you can store any kind of data in any column and it won't complain. Instead we emulate static checking by adding the `CHECK` command, as per above. This does not give a more compact encoding but does ensure data consistency. Note that if you somehow retreive some other invalid text as an enum, `diesel` will error at the point of deserialization.
 
 ### Type renaming
 
@@ -117,7 +117,7 @@ See [this test](tests/src/rename.rs) for an example of renaming.
 
 The `print-schema` command (from `diesel_cli`) attempts to connect to an existing DB and generate a correct mapping of Postgres columns to Diesel internal types. If a custom ENUM exists in the database, Diesel will simply assume that the internal mapping type is the ENUM name, Title-cased (e.g. `my_enum` -> `My_enum`). Therefore the derived mapping name must also be corrected with the `DieselType` attribute e.g. `#[DieselType] = "My_enum"]`.
 
-Unfortunately the `infer_schema!` is not yet compatible with this crate.
+Unfortunately the `infer_schema!` is not compatible with this crate.
 
 ### License
 
