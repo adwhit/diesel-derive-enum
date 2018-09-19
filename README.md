@@ -115,7 +115,7 @@ See [this test](tests/src/rename.rs) for an example of renaming.
 
 #### `print-schema` and `infer-schema!`
 
-The `print-schema` command (from `diesel_cli`) attempts to connect to an existing DB and generate a correct mapping of Postgres columns to Diesel internal types. If a custom ENUM exists in the database, Diesel will simply assume that the internal mapping type is the ENUM name, Title-cased (e.g. `my_enum` -> `My_enum`). Therefore the derived mapping name must also be corrected with the `DieselType` attribute e.g. `#[DieselType] = "My_enum"]`.
+The `print-schema` command (from `diesel_cli`) attempts to connect to an existing DB and generate a correct mapping of Postgres columns to Diesel internal types. If a custom ENUM exists in the database, Diesel will simply assume that the internal mapping type is the ENUM name, Title-cased (e.g. `my_enum` -> `My_enum`). Therefore the derived mapping name must also be corrected with the `DieselType` attribute e.g. `#[DieselType = "My_enum"]`.
 
 Unfortunately the `infer_schema!` is not compatible with this crate.
 
