@@ -76,17 +76,17 @@ fn generate_derive_enum_impls(
     let pg_impl = if cfg!(feature = "postgres") {
         generate_postgres_impl(db_type, diesel_mapping, enum_ty, variants_rs, variants_db)
     } else {
-        quote!{}
+        quote! {}
     };
     let mysql_impl = if cfg!(feature = "mysql") {
         generate_mysql_impl(diesel_mapping, enum_ty, variants_rs, variants_db)
     } else {
-        quote!{}
+        quote! {}
     };
     let sqlite_impl = if cfg!(feature = "sqlite") {
         generate_sqlite_impl(diesel_mapping, enum_ty, variants_rs, variants_db)
     } else {
-        quote!{}
+        quote! {}
     };
     quote! {
         pub use self::#modname::#diesel_mapping;
@@ -109,7 +109,7 @@ fn generate_common_impl(
     quote! {
         use super::*;
         use diesel::Queryable;
-        use diesel::backend::Backend;
+        use diesel::backend::{Backend, HasRawValue};
         use diesel::expression::AsExpression;
         use diesel::expression::bound::Bound;
         use diesel::row::Row;
@@ -221,7 +221,7 @@ fn generate_postgres_impl(
             }
 
             impl FromSql<#diesel_mapping, Pg> for #enum_ty {
-                fn from_sql(bytes: Option<&<Pg as Backend>::RawValue>) -> deserialize::Result<Self> {
+                fn from_sql(bytes: Option<<Pg as HasRawValue>::RawValue>) -> deserialize::Result<Self> {
                     match bytes {
                         #(Some(#variants_db) => Ok(#variants_rs),)*
                         Some(v) => Err(format!("Unrecognized enum variant: '{}'",
@@ -267,7 +267,7 @@ fn generate_mysql_impl(
             }
 
             impl FromSql<#diesel_mapping, Mysql> for #enum_ty {
-                fn from_sql(bytes: Option<&<Mysql as Backend>::RawValue>) -> deserialize::Result<Self> {
+                fn from_sql(bytes: Option<<Mysql as HasRawValue>::RawValue>) -> deserialize::Result<Self> {
                     match bytes {
                         #(Some(#variants_db) => Ok(#variants_rs),)*
                         Some(v) => Err(format!("Unrecognized enum variant: '{}'",
@@ -313,7 +313,7 @@ fn generate_sqlite_impl(
             }
 
             impl FromSql<#diesel_mapping, Sqlite> for #enum_ty {
-                fn from_sql(bytes: Option<&<Sqlite as Backend>::RawValue>) -> deserialize::Result<Self> {
+                fn from_sql(bytes: Option<<Sqlite as HasRawValue>::RawValue>) -> deserialize::Result<Self> {
                     match bytes.map(|v| v.read_blob()) {
                         #(Some(#variants_db) => Ok(#variants_rs),)*
                         Some(blob) => Err(format!("Unexpected variant: {}", String::from_utf8_lossy(blob)).into()),
