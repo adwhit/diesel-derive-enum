@@ -14,9 +14,6 @@ quote = "0.3.15"
 syn = "0.11.11"
 heck = "0.3.0"
 
-[dev-dependencies]
-diesel = {version = "1.1", features = ["postgres", "sqlite", "mysql"] }
-
 [features]
 postgres = []
 sqlite = []
@@ -25,7 +22,3 @@ mysql = []
 [lib]
 name = "diesel_derive_enum"
 proc-macro = true
-
-[patch.crates-io]
-diesel = { git = 'https://github.com/diesel-rs/diesel' }
-diesel_derives = { git = "https://github.com/diesel-rs/diesel" }
