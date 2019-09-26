@@ -4,7 +4,9 @@
 
 Use Rust enums directly with [`diesel`](https://github.com/diesel-rs/diesel) ORM.
 
-Requires diesel v1.1+.
+The latest release, `0.4.4`, requires `diesel 1.1+`.
+
+*Note:* The current master branch tracks `diesel` master, and will **not** work with `diesel 1.x`.
 
 ### Example usage:
 
