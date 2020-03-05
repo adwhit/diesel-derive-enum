@@ -65,7 +65,7 @@ fn generate_derive_enum_impls(
             }
         })
         .collect();
-    // panic!("variants_ids:{:#?}", variant_ids);
+
     let variants_db: Vec<LitByteStr> = variants
         .iter()
         .map(|variant| {
@@ -75,12 +75,12 @@ fn generate_derive_enum_impls(
         })
         .collect();
 
-    // panic!("variants_db:{:#?}", variants_db);
+
     let variants_rs: &[proc_macro2::TokenStream] = &variant_ids;
     let variants_db: &[LitByteStr] = &variants_db;
 
     let common_impl = generate_common_impl(diesel_mapping, enum_ty, variants_rs, variants_db);
-    // panic!("common_impl:{}", common_impl);  
+ 
 
     let pg_impl = if cfg!(feature = "postgres") {
         generate_postgres_impl(db_type, diesel_mapping, enum_ty, variants_rs, variants_db)
@@ -108,7 +108,7 @@ fn generate_derive_enum_impls(
             #sqlite_impl
         }
     };
-    // panic!("{}", quoted);
+
 
     proc_macro::TokenStream::from(quoted)
 }
