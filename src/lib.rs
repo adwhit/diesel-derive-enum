@@ -91,7 +91,7 @@ fn generate_derive_enum_impls(
     quote! {
         pub use self::#modname::#diesel_mapping;
         #[allow(non_snake_case)]
-        mod #modname {
+        pub mod #modname {
             #common_impl
             #pg_impl
             #mysql_impl
