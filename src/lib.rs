@@ -124,6 +124,11 @@ fn generate_common_impl(
             type QueryId = #diesel_mapping;
             const HAS_STATIC_QUERY_ID: bool = true;
         }
+        impl Clone for #diesel_mapping {
+            fn clone(&self) -> Self {
+                #diesel_mapping {}
+            }
+        }
         impl NotNull for #diesel_mapping {}
         impl SingleValue for #diesel_mapping {}
 
