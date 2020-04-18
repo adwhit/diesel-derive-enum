@@ -1,5 +1,6 @@
 #![recursion_limit = "1024"]
 
+extern crate proc_macro;
 
 use heck::SnakeCase;
 use proc_macro::TokenStream;
@@ -21,10 +22,9 @@ pub fn derive(input: TokenStream) -> TokenStream {
     let quoted = if let Data::Enum(syn::DataEnum{variants: data_variants, ..})= input.data {
         generate_derive_enum_impls(&db_type, &diesel_mapping, &input.ident, &data_variants)
     } else {
-        panic!("#derive(DbEnum) can only be applied to enums")
+        return syn::Error::new(Span::call_site(), "derive(DbEnum) can only be applied to enums").to_compile_error().into()
     };
-
-    proc_macro::TokenStream::from(quoted)
+    quoted.into()
 }
 
 
@@ -110,7 +110,7 @@ fn generate_derive_enum_impls(
     };
 
 
-    proc_macro::TokenStream::from(quoted)
+    quoted.into()
 }
 
 fn generate_common_impl(
