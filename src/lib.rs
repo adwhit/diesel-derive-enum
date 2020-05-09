@@ -1,40 +1,44 @@
 #![recursion_limit = "1024"]
 
-extern crate heck;
 extern crate proc_macro;
-#[macro_use]
-extern crate quote;
-extern crate syn;
 
 use heck::SnakeCase;
 use proc_macro::TokenStream;
-use quote::Tokens;
+use quote::quote;
 use syn::*;
+use proc_macro2::{Ident, Span};
 
 #[proc_macro_derive(DbEnum, attributes(PgType, DieselType, db_rename))]
 pub fn derive(input: TokenStream) -> TokenStream {
-    let input = input.to_string();
-    let ast = syn::parse_derive_input(&input).expect("Failed to parse item");
-    let db_type =
-        type_from_attrs(&ast.attrs, "PgType").unwrap_or(ast.ident.as_ref().to_snake_case());
-    let diesel_mapping = type_from_attrs(&ast.attrs, "DieselType")
-        .unwrap_or(format!("{}Mapping", ast.ident.as_ref()));
-    let diesel_mapping = Ident::new(diesel_mapping);
+    let input:DeriveInput =  parse_macro_input!(input as DeriveInput);
+    let db_type = 
+        type_from_attrs(&input.attrs, "PgType")
+            .unwrap_or(input.ident.to_string().to_snake_case());
+    let diesel_mapping = 
+        type_from_attrs(&input.attrs, "DieselType")
+            .unwrap_or(format!("{}Mapping", input.ident));
 
-    let quoted = if let Body::Enum(ref variants) = ast.body {
-        generate_derive_enum_impls(&db_type, &diesel_mapping, &ast.ident, variants)
+    let diesel_mapping = Ident::new(diesel_mapping.as_ref(), Span::call_site());
+    let quoted = if let Data::Enum(syn::DataEnum{variants: data_variants, ..})= input.data {
+        generate_derive_enum_impls(&db_type, &diesel_mapping, &input.ident, &data_variants)
     } else {
-        panic!("#derive(DbEnum) can only be applied to enums")
+        return syn::Error::new(Span::call_site(), "derive(DbEnum) can only be applied to enums").to_compile_error().into()
     };
-
-    quoted.parse().unwrap()
+    quoted.into()
 }
+
+
 
 fn type_from_attrs(attrs: &[Attribute], attrname: &str) -> Option<String> {
     for attr in attrs {
-        if let MetaItem::NameValue(ref key, Lit::Str(ref type_, _)) = attr.value {
-            if key == attrname {
-                return Some(type_.clone());
+        if attr.path.is_ident(attrname){
+            match attr.parse_meta().ok()? {
+                Meta::NameValue(MetaNameValue { lit: Lit::Str(lit_str), .. }) => {
+                    return Some(lit_str.value())
+                }
+                _ => {
+                    return None
+                }
             }
         }
     }
@@ -45,13 +49,13 @@ fn generate_derive_enum_impls(
     db_type: &str,
     diesel_mapping: &Ident,
     enum_ty: &Ident,
-    variants: &[Variant],
-) -> Tokens {
-    let modname = Ident::new(format!("db_enum_impl_{}", enum_ty.as_ref()));
-    let variant_ids: Vec<Tokens> = variants
+    variants: &syn::punctuated::Punctuated<Variant, syn::token::Comma>,
+) -> TokenStream {
+    let modname = Ident::new(&format!("db_enum_impl_{}", enum_ty), Span::call_site());
+    let variant_ids: Vec<proc_macro2::TokenStream> = variants
         .iter()
         .map(|variant| {
-            if let VariantData::Unit = variant.data {
+            if let Fields::Unit = variant.fields {
                 let id = &variant.ident;
                 quote! {
                     #enum_ty::#id
@@ -61,18 +65,23 @@ fn generate_derive_enum_impls(
             }
         })
         .collect();
-    let variants_db: Vec<Ident> = variants
+
+    let variants_db: Vec<LitByteStr> = variants
         .iter()
         .map(|variant| {
             let dbname = type_from_attrs(&variant.attrs, "db_rename")
-                .unwrap_or(variant.ident.as_ref().to_snake_case());
-            Ident::new(format!(r#"b"{}""#, dbname))
+                .unwrap_or(variant.ident.to_string().to_snake_case());
+            LitByteStr::new(&dbname.into_bytes(), Span::call_site())
         })
         .collect();
-    let variants_rs: &[Tokens] = &variant_ids;
-    let variants_db: &[Ident] = &variants_db;
+
+
+    let variants_rs: &[proc_macro2::TokenStream] = &variant_ids;
+    let variants_db: &[LitByteStr] = &variants_db;
 
     let common_impl = generate_common_impl(diesel_mapping, enum_ty, variants_rs, variants_db);
+ 
+
     let pg_impl = if cfg!(feature = "postgres") {
         generate_postgres_impl(db_type, diesel_mapping, enum_ty, variants_rs, variants_db)
     } else {
@@ -88,7 +97,8 @@ fn generate_derive_enum_impls(
     } else {
         quote!{}
     };
-    quote! {
+    
+    let quoted = quote! {
         pub use self::#modname::#diesel_mapping;
         #[allow(non_snake_case)]
         mod #modname {
@@ -97,15 +107,18 @@ fn generate_derive_enum_impls(
             #mysql_impl
             #sqlite_impl
         }
-    }
+    };
+
+
+    quoted.into()
 }
 
 fn generate_common_impl(
     diesel_mapping: &Ident,
     enum_ty: &Ident,
-    variants_rs: &[Tokens],
-    variants_db: &[Ident],
-) -> Tokens {
+    variants_rs: &[proc_macro2::TokenStream],
+    variants_db: &[LitByteStr],
+) -> proc_macro2::TokenStream {
     quote! {
         use super::*;
         use diesel::Queryable;
@@ -200,9 +213,9 @@ fn generate_postgres_impl(
     db_type: &str,
     diesel_mapping: &Ident,
     enum_ty: &Ident,
-    variants_rs: &[Tokens],
-    variants_db: &[Ident],
-) -> Tokens {
+    variants_rs: &[proc_macro2::TokenStream],
+    variants_db: &[LitByteStr],
+) -> proc_macro2::TokenStream {
     quote! {
         mod pg_impl {
             use super::*;
@@ -245,9 +258,9 @@ fn generate_postgres_impl(
 fn generate_mysql_impl(
     diesel_mapping: &Ident,
     enum_ty: &Ident,
-    variants_rs: &[Tokens],
-    variants_db: &[Ident],
-) -> Tokens {
+    variants_rs: &[proc_macro2::TokenStream],
+    variants_db: &[LitByteStr],
+) -> proc_macro2::TokenStream {
     quote! {
         mod mysql_impl {
             use super::*;
@@ -291,9 +304,9 @@ fn generate_mysql_impl(
 fn generate_sqlite_impl(
     diesel_mapping: &Ident,
     enum_ty: &Ident,
-    variants_rs: &[Tokens],
-    variants_db: &[Ident],
-) -> Tokens {
+    variants_rs: &[proc_macro2::TokenStream],
+    variants_db: &[LitByteStr],
+) -> proc_macro2::TokenStream {
     quote! {
         mod sqlite_impl {
             use super::*;
