@@ -1,0 +1,43 @@
+on: [push, pull_request]
+
+name: CI
+
+jobs:
+  build:
+    name: Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_PASSWORD: postgres
+      mysql:
+        image: mysql
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: 1.39.0
+
+      - name: Test Postgres
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path tests/Cargo.toml --features postgres
+
+      - name: Test MySQL
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path tests/Cargo.toml --features mysql
+
+      - name: Test sqlite
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path tests/Cargo.toml --features sqlite
