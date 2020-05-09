@@ -1,6 +1,6 @@
 [package]
 name = "diesel-derive-enum"
-version = "0.4.4"
+version = "1.0.0"
 description = "Derive diesel boilerplate for using enums in databases"
 authors = ["Alex Whitney <adwhit@fastmail.com>"]
 repository = "http://github.com/adwhit/diesel-derive-enum"
@@ -11,13 +11,10 @@ readme = "README.md"
 edition = "2018"
 
 [dependencies]
-quote = "1.0.3"
-syn = "1.0.16"
-heck = "0.3.1"
-proc-macro2 = "1.0.9"
-
-[dev-dependencies]
-diesel = {version = "1.1", features = ["postgres", "sqlite", "mysql"] }
+quote = "1"
+syn = "1"
+heck = "0.3"
+proc-macro2 = "1"
 
 [features]
 postgres = []

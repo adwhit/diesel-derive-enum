@@ -1,6 +1,5 @@
 use diesel::prelude::*;
 
-
 #[cfg(any(feature = "sqlite", feature = "postgres", feature = "mysql"))]
 use common::get_connection;
 

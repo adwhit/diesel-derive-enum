@@ -9,7 +9,7 @@ extern crate diesel;
 extern crate diesel_derive_enum;
 
 mod common;
-mod pg_array;
 mod nullable;
+mod pg_array;
 mod rename;
 mod simple;

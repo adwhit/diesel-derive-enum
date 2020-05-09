@@ -6,6 +6,11 @@ jobs:
   build:
     name: Tests
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust:
+          - stable
+          - 1.39.0
 
     services:
       postgres:
@@ -26,6 +31,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt install -y libpq-dev libsqlite3-dev libmysqlclient-dev
+          sleep 5 # sigh mysql takes ages to start
           mysql -h 127.0.0.1 --port 3306 -u root -pmysql -e 'CREATE DATABASE IF NOT EXISTS test;'
 
       - name: Checkout
@@ -34,7 +40,8 @@ jobs:
       - name: Install toolchain
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.39.0
+          toolchain: ${{ matrix.rust }}
+          override: true
 
       - name: Test Postgres
         uses: actions-rs/cargo@v1
