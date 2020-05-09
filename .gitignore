@@ -1,4 +1,4 @@
 *.swp
 target/
 **/*.rs.bk
-Cargo.lock
+/Cargo.lock
