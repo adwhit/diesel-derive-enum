@@ -1,7 +1,7 @@
 use diesel::prelude::*;
 use diesel::insert_into;
 
-use common::*;
+use crate::common::*;
 
 #[test]
 #[cfg(any(feature = "sqlite", feature = "postgres", feature = "mysql"))]
@@ -21,7 +21,7 @@ fn enum_round_trip() {
 #[test]
 #[cfg(any(feature = "sqlite", feature = "postgres", feature = "mysql"))]
 fn filter_by_enum() {
-    use common::test_simple::dsl::*;
+    use crate::common::test_simple::dsl::*;
     let connection = get_connection();
     create_table(&connection);
     let data = sample_data();
@@ -79,7 +79,7 @@ fn sqlite_invalid_enum() {
 // test snakey naming - should compile and not clobber above definitions
 // (but we won't actually bother round-tripping)
 
-#[derive(Debug, PartialEq, DbEnum)]
+#[derive(Debug, PartialEq, diesel_derive_enum::DbEnum)]
 pub enum my_enum {
     foo,
     bar,

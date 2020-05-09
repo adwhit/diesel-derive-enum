@@ -1,10 +1,9 @@
 use diesel::prelude::*;
 
-
 #[cfg(any(feature = "sqlite", feature = "postgres", feature = "mysql"))]
-use common::get_connection;
+use crate::common::get_connection;
 
-#[derive(Debug, PartialEq, DbEnum)]
+#[derive(Debug, PartialEq, diesel_derive_enum::DbEnum)]
 #[PgType = "Just_Whatever"]
 #[DieselType = "Some_Ugly_Renaming"]
 pub enum RenameMe {

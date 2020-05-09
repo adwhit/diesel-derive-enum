@@ -4,11 +4,6 @@
 #![allow(dead_code)]
 #![allow(unused_imports)]
 
-#[macro_use]
-extern crate diesel;
-#[macro_use]
-extern crate diesel_derive_enum;
-
 mod common;
 mod pg_array;
 mod nullable;
