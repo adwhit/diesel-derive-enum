@@ -14,7 +14,8 @@ pub fn create_table(conn: &PgConnection) {
             my_enum_arr my_enum[] NOT NULL
         );
     "#,
-    ).unwrap();
+    )
+    .unwrap();
 }
 
 #[test]

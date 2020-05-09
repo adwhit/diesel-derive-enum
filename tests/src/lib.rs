@@ -5,7 +5,7 @@
 #![allow(unused_imports)]
 
 mod common;
-mod pg_array;
 mod nullable;
+mod pg_array;
 mod rename;
 mod simple;

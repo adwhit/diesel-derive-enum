@@ -4,41 +4,45 @@ extern crate proc_macro;
 
 use heck::SnakeCase;
 use proc_macro::TokenStream;
+use proc_macro2::{Ident, Span};
 use quote::quote;
 use syn::*;
-use proc_macro2::{Ident, Span};
 
 #[proc_macro_derive(DbEnum, attributes(PgType, DieselType, db_rename))]
 pub fn derive(input: TokenStream) -> TokenStream {
-    let input:DeriveInput =  parse_macro_input!(input as DeriveInput);
-    let db_type = 
-        type_from_attrs(&input.attrs, "PgType")
-            .unwrap_or(input.ident.to_string().to_snake_case());
-    let diesel_mapping = 
-        type_from_attrs(&input.attrs, "DieselType")
-            .unwrap_or(format!("{}Mapping", input.ident));
+    let input: DeriveInput = parse_macro_input!(input as DeriveInput);
+    let db_type =
+        type_from_attrs(&input.attrs, "PgType").unwrap_or(input.ident.to_string().to_snake_case());
+    let diesel_mapping =
+        type_from_attrs(&input.attrs, "DieselType").unwrap_or(format!("{}Mapping", input.ident));
 
     let diesel_mapping = Ident::new(diesel_mapping.as_ref(), Span::call_site());
-    let quoted = if let Data::Enum(syn::DataEnum{variants: data_variants, ..})= input.data {
+    let quoted = if let Data::Enum(syn::DataEnum {
+        variants: data_variants,
+        ..
+    }) = input.data
+    {
         generate_derive_enum_impls(&db_type, &diesel_mapping, &input.ident, &data_variants)
     } else {
-        return syn::Error::new(Span::call_site(), "derive(DbEnum) can only be applied to enums").to_compile_error().into()
+        return syn::Error::new(
+            Span::call_site(),
+            "derive(DbEnum) can only be applied to enums",
+        )
+        .to_compile_error()
+        .into();
     };
     quoted.into()
 }
 
-
-
 fn type_from_attrs(attrs: &[Attribute], attrname: &str) -> Option<String> {
     for attr in attrs {
-        if attr.path.is_ident(attrname){
+        if attr.path.is_ident(attrname) {
             match attr.parse_meta().ok()? {
-                Meta::NameValue(MetaNameValue { lit: Lit::Str(lit_str), .. }) => {
-                    return Some(lit_str.value())
-                }
-                _ => {
-                    return None
-                }
+                Meta::NameValue(MetaNameValue {
+                    lit: Lit::Str(lit_str),
+                    ..
+                }) => return Some(lit_str.value()),
+                _ => return None,
             }
         }
     }
@@ -75,12 +79,10 @@ fn generate_derive_enum_impls(
         })
         .collect();
 
-
     let variants_rs: &[proc_macro2::TokenStream] = &variant_ids;
     let variants_db: &[LitByteStr] = &variants_db;
 
     let common_impl = generate_common_impl(diesel_mapping, enum_ty, variants_rs, variants_db);
- 
 
     let pg_impl = if cfg!(feature = "postgres") {
         generate_postgres_impl(db_type, diesel_mapping, enum_ty, variants_rs, variants_db)
@@ -97,7 +99,7 @@ fn generate_derive_enum_impls(
     } else {
         quote! {}
     };
-    
+
     let quoted = quote! {
         pub use self::#modname::#diesel_mapping;
         #[allow(non_snake_case)]
@@ -108,7 +110,6 @@ fn generate_derive_enum_impls(
             #sqlite_impl
         }
     };
-
 
     quoted.into()
 }

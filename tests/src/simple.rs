@@ -1,5 +1,5 @@
-use diesel::prelude::*;
 use diesel::insert_into;
+use diesel::prelude::*;
 
 use crate::common::*;
 

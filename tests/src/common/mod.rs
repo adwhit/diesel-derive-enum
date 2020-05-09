@@ -86,7 +86,8 @@ pub fn create_table(conn: &PgConnection) {
             my_enum my_enum NOT NULL
         );
     "#,
-    ).unwrap();
+    )
+    .unwrap();
 }
 
 #[cfg(feature = "mysql")]
@@ -99,7 +100,8 @@ pub fn create_table(conn: &MysqlConnection) {
             my_enum enum('foo', 'bar', 'baz_quxx') NOT NULL
         );
     "#,
-    ).unwrap();
+    )
+    .unwrap();
 }
 
 #[cfg(feature = "sqlite")]
@@ -111,5 +113,6 @@ pub fn create_table(conn: &SqliteConnection) {
             my_enum TEXT CHECK(my_enum IN ('foo', 'bar', 'baz_quxx')) NOT NULL
         );
     "#,
-    ).unwrap();
+    )
+    .unwrap();
 }
