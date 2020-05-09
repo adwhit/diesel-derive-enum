@@ -1,6 +1,6 @@
 # diesel-derive-enum
 [![crates.io](https://img.shields.io/crates/v/diesel-derive-enum.svg)](https://crates.io/crates/diesel-derive-enum)
-[![Build Status](https://travis-ci.org/adwhit/diesel-derive-enum.svg?branch=master)](https://travis-ci.org/adwhit/diesel-derive-enum)
+![Build Status](https://github.com/adwhit/diesel-derive-enum/workflows/CI/badge.svg)
 
 Use Rust enums directly with [`diesel`](https://github.com/diesel-rs/diesel) ORM.
 
@@ -136,6 +136,17 @@ a correct mapping of Postgres columns to Diesel internal types. If a custom ENUM
 database, Diesel will simply assume that the internal mapping type is the ENUM name,
 Title-cased (e.g. `my_enum` -> `My_enum`). Therefore the derived mapping name must also
 be corrected with the `DieselType` attribute e.g. `#[DieselType = "My_enum"]`.
+
+If you are using a `diesel.toml` file to generate your `schema.rs` file, you should be sure to
+add an extra import for the enum mapping type, i.e. it should look something like the following:
+
+``` toml
+# In diesel.toml
+
+[print_schema]
+file = "src/schema.rs"
+import_types = ["diesel::sql_types::*", "crate::my_enum::*"]   # <- note the extra import
+```
 
 Unfortunately the `infer_schema!` is not compatible with this crate.
 
