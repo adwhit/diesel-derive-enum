@@ -124,10 +124,23 @@ Specifically, we assume `MyEnum` corresponds to `my_enum` in Postgres and `MyEnu
 These defaults can be overridden with the attributes `#[PgType = "..."]` and `#[DieselType = "..."]`.
 (The `PgType` annotation has no effect on `MySQL` or `sqlite`).
 
-Similarly, we assume that the possible ENUM variants are simply the Rust enum variants
-translated to `snake_case`. These can be renamed with the inline annotation `#[db_rename = "..."]`.
+Similarly, by default we assume that the possible ENUM variants are simply the Rust enum variants
+translated to `snake_case`.  These can be renamed with the inline annotation `#[db_rename = "..."]`.
 
 See [this test](tests/src/rename.rs) for an example of renaming.
+
+You can override the `snake_case` assumption for the entire enum using the `#[DbValueStyle = "..."]` attribute.  Individual variants can still be renamed using `#[db_rename = "..."]`.
+
+| DbValueStyle   | Variant | Value   |
+|:-------------------:|:---------:|:---|
+| camelCase | BazQuxx | "bazQuxx" |
+| kebab-case | BazQuxx | "baz-quxx" |
+| PascalCase | BazQuxx | "BazQuxx" |
+| SCREAMING_SNAKE | BazQuxx | "BAZ_QUXX" |
+| snake_case | BazQuxx | "baz_quxx" |
+| verbatim | Baz__quxx | "Baz__quxx" |
+
+See [this test](tests/src/value_style.rs) for an example of changing the output style.
 
 #### `print-schema` and `infer-schema!`
 

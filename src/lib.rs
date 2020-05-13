@@ -2,13 +2,13 @@
 
 extern crate proc_macro;
 
-use heck::SnakeCase;
+use heck::{CamelCase, KebabCase, MixedCase, ShoutySnakeCase, SnakeCase};
 use proc_macro::TokenStream;
 use proc_macro2::{Ident, Span};
 use quote::quote;
 use syn::*;
 
-#[proc_macro_derive(DbEnum, attributes(PgType, DieselType, db_rename))]
+#[proc_macro_derive(DbEnum, attributes(PgType, DieselType, DbValueStyle, db_rename))]
 pub fn derive(input: TokenStream) -> TokenStream {
     let input: DeriveInput = parse_macro_input!(input as DeriveInput);
     let db_type =
@@ -16,13 +16,24 @@ pub fn derive(input: TokenStream) -> TokenStream {
     let diesel_mapping =
         type_from_attrs(&input.attrs, "DieselType").unwrap_or(format!("{}Mapping", input.ident));
 
+    // Maintain backwards compatibility by defaulting to snake case.
+    let case_style =
+        type_from_attrs(&input.attrs, "DbValueStyle").unwrap_or("snake_case".to_string());
+    let case_style = CaseStyle::from_string(&case_style);
+
     let diesel_mapping = Ident::new(diesel_mapping.as_ref(), Span::call_site());
     let quoted = if let Data::Enum(syn::DataEnum {
         variants: data_variants,
         ..
     }) = input.data
     {
-        generate_derive_enum_impls(&db_type, &diesel_mapping, &input.ident, &data_variants)
+        generate_derive_enum_impls(
+            &db_type,
+            &diesel_mapping,
+            case_style,
+            &input.ident,
+            &data_variants,
+        )
     } else {
         return syn::Error::new(
             Span::call_site(),
@@ -49,9 +60,35 @@ fn type_from_attrs(attrs: &[Attribute], attrname: &str) -> Option<String> {
     None
 }
 
+/// Defines the casing for the database representation.  Follows serde naming convention.
+#[derive(Copy, Clone, Debug, PartialEq)]
+enum CaseStyle {
+    Camel,
+    Kebab,
+    Pascal,
+    ScreamingSnake,
+    Snake,
+    Verbatim,
+}
+
+impl CaseStyle {
+    fn from_string(name: &str) -> Self {
+        match name {
+            "camelCase" => CaseStyle::Camel,
+            "kebab-case" => CaseStyle::Kebab,
+            "PascalCase" => CaseStyle::Pascal,
+            "SCREAMING_SNAKE_CASE" => CaseStyle::ScreamingSnake,
+            "snake_case" => CaseStyle::Snake,
+            "verbatim" | "verbatimcase" => CaseStyle::Verbatim,
+            s => panic!("unsupported casing: `{}`", s),
+        }
+    }
+}
+
 fn generate_derive_enum_impls(
     db_type: &str,
     diesel_mapping: &Ident,
+    case_style: CaseStyle,
     enum_ty: &Ident,
     variants: &syn::punctuated::Punctuated<Variant, syn::token::Comma>,
 ) -> TokenStream {
@@ -74,7 +111,7 @@ fn generate_derive_enum_impls(
         .iter()
         .map(|variant| {
             let dbname = type_from_attrs(&variant.attrs, "db_rename")
-                .unwrap_or(variant.ident.to_string().to_snake_case());
+                .unwrap_or(stylize_value(&variant.ident.to_string(), case_style));
             LitByteStr::new(&dbname.into_bytes(), Span::call_site())
         })
         .collect();
@@ -112,6 +149,17 @@ fn generate_derive_enum_impls(
     };
 
     quoted.into()
+}
+
+fn stylize_value(value: &str, style: CaseStyle) -> String {
+    match style {
+        CaseStyle::Camel => value.to_mixed_case(),
+        CaseStyle::Kebab => value.to_kebab_case(),
+        CaseStyle::Pascal => value.to_camel_case(),
+        CaseStyle::ScreamingSnake => value.to_shouty_snake_case(),
+        CaseStyle::Snake => value.to_snake_case(),
+        CaseStyle::Verbatim => value.to_string(),
+    }
 }
 
 fn generate_common_impl(
