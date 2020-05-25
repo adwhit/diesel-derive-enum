@@ -1,12 +1,12 @@
 use diesel::prelude::*;
 
 #[cfg(any(feature = "sqlite", feature = "postgres", feature = "mysql"))]
-use common::get_connection;
+use crate::common::get_connection;
 
-#[derive(Debug, PartialEq, DbEnum)]
-#[PgType = "Just_Whatever"]
-#[DieselType = "Some_Ugly_Renaming"]
-pub enum RenameMe {
+#[derive(Debug, PartialEq, diesel_derive_enum::DbEnum)]
+#[PgType = "Some_External_Type"]
+#[DieselType = "Some_Internal_Type"]
+pub enum SomeEnum {
     #[db_rename = "mod"]
     Mod,
     #[db_rename = "type"]
@@ -17,10 +17,10 @@ pub enum RenameMe {
 
 table! {
     use diesel::sql_types::Integer;
-    use super::Some_Ugly_Renaming;
+    use super::Some_Internal_Type;
     test_rename {
         id -> Integer,
-        renamed -> Some_Ugly_Renaming,
+        renamed -> Some_Internal_Type,
     }
 }
 
@@ -28,7 +28,7 @@ table! {
 #[table_name = "test_rename"]
 struct TestRename {
     id: i32,
-    renamed: RenameMe,
+    renamed: SomeEnum,
 }
 
 #[test]
@@ -39,21 +39,21 @@ fn rename_round_trip() {
     let data = vec![
         TestRename {
             id: 1,
-            renamed: RenameMe::Mod,
+            renamed: SomeEnum::Mod,
         },
         TestRename {
             id: 2,
-            renamed: RenameMe::WithASpace,
+            renamed: SomeEnum::WithASpace,
         },
     ];
     let connection = get_connection();
     connection
         .batch_execute(
             r#"
-        CREATE TYPE Just_Whatever AS ENUM ('mod', 'type', 'with spaces');
+        CREATE TYPE Some_External_Type AS ENUM ('mod', 'type', 'with spaces');
         CREATE TABLE test_rename (
             id SERIAL PRIMARY KEY,
-            renamed Just_Whatever NOT NULL
+            renamed Some_External_Type NOT NULL
         );
     "#,
         )
@@ -73,11 +73,11 @@ fn rename_round_trip() {
     let data = vec![
         TestRename {
             id: 1,
-            renamed: RenameMe::Mod,
+            renamed: SomeEnum::Mod,
         },
         TestRename {
             id: 2,
-            renamed: RenameMe::WithASpace,
+            renamed: SomeEnum::WithASpace,
         },
     ];
     let connection = get_connection();

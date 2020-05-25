@@ -1,7 +1,7 @@
 use diesel::insert_into;
 use diesel::prelude::*;
 
-use common::*;
+use crate::common::*;
 
 table! {
     use diesel::sql_types::{Integer, Nullable};
