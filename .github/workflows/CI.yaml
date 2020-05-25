@@ -29,10 +29,7 @@ jobs:
 
     steps:
       - name: Install dependencies
-        run: |
-          sudo apt install -y libpq-dev libsqlite3-dev libmysqlclient-dev
-          sleep 5 # sigh mysql takes ages to start
-          mysql -h 127.0.0.1 --port 3306 -u root -pmysql -e 'CREATE DATABASE IF NOT EXISTS test;'
+        run: sudo apt install -y libpq-dev libsqlite3-dev libmysqlclient-dev
 
       - name: Checkout
         uses: actions/checkout@v2
@@ -51,6 +48,9 @@ jobs:
         env:
           PG_TEST_DATABASE_URL: "postgres://postgres:postgres@localhost:5432"
           RUST_TEST_THREADS: 1
+
+      - name: Create MySQL database
+        run: mysql -h 127.0.0.1 --port 3306 -u root -pmysql -e 'CREATE DATABASE IF NOT EXISTS test;'
 
       - name: Test MySQL
         uses: actions-rs/cargo@v1
