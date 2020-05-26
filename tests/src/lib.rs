@@ -11,3 +11,4 @@ mod nullable;
 mod pg_array;
 mod rename;
 mod simple;
+mod value_style;
