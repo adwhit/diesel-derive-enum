@@ -4,7 +4,7 @@
 
 Use Rust enums directly with [`diesel`](https://github.com/diesel-rs/diesel) ORM.
 
-The latest release, `1.0.0`, is tested against `diesel 1.4` and `rustc 1.39.0`. It _may_ work with older versions.
+The latest release, `1.1.0`, is tested against `diesel 1.4` and `rustc 1.39.0`. It _may_ work with older versions.
 
 *Note:* The current master branch tracks `diesel` master, and will **not** work with `diesel 1.x`.
 
@@ -98,7 +98,7 @@ Postgres arrays work too! See [this example.](tests/src/pg_array.rs)
 ### Enums Explained
 
 Enums work slightly differently in each of the three databases.
-* In Postgres, one declares an enum as a separate type within a schema, which may then
+* In Postgres, the user declares an enum as a separate type within a schema, which may then
   be used in multiple tables. Internally, an enum value is encoded as an int (four bytes)
   and stored inline within a row - a much more efficient representation than a string.
 * MySQL is similar except the enum is not declared as a separate type and is 'local' to
@@ -109,7 +109,7 @@ Enums work slightly differently in each of the three databases.
   but does ensure data integrity. Note that if you somehow retreive some other invalid
   text as an enum, `diesel` will error at the point of deserialization.
 
-### Type renaming
+### Renaming
 
 Diesel maintains a set of internal types which correspond one-to-one to the types available in various
 relational databases. Each internal type in turn maps to some kind of Rust native type.

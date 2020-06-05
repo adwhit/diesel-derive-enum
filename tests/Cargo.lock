@@ -26,7 +26,7 @@ dependencies = [
 
 [[package]]
 name = "diesel-derive-enum"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
  "heck 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "proc-macro2 1.0.12 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -139,7 +139,7 @@ name = "tests"
 version = "0.1.0"
 dependencies = [
  "diesel 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "diesel-derive-enum 1.0.0",
+ "diesel-derive-enum 1.1.0",
 ]
 
 [[package]]
