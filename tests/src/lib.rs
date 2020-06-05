@@ -3,9 +3,6 @@
 #![allow(dead_code)]
 #![allow(unused_imports)]
 
-#[macro_use]
-extern crate diesel;
-
 mod common;
 mod nullable;
 mod pg_array;

@@ -10,7 +10,7 @@ jobs:
       matrix:
         rust:
           - stable
-          - 1.39.0
+          - 1.40.0
 
     services:
       postgres:

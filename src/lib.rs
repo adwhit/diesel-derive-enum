@@ -171,7 +171,7 @@ fn generate_common_impl(
     quote! {
         use super::*;
         use diesel::Queryable;
-        use diesel::backend::Backend;
+        use diesel::backend::{self, Backend};
         use diesel::expression::AsExpression;
         use diesel::expression::bound::Bound;
         use diesel::row::Row;
@@ -268,7 +268,7 @@ fn generate_postgres_impl(
     quote! {
         mod pg_impl {
             use super::*;
-            use diesel::pg::Pg;
+            use diesel::pg::{Pg, PgValue};
 
             impl HasSqlType<#diesel_mapping> for Pg {
                 fn metadata(lookup: &Self::MetadataLookup) -> Self::TypeMetadata {
@@ -283,8 +283,8 @@ fn generate_postgres_impl(
             }
 
             impl FromSql<#diesel_mapping, Pg> for #enum_ty {
-                fn from_sql(bytes: Option<&<Pg as Backend>::RawValue>) -> deserialize::Result<Self> {
-                    match bytes {
+                fn from_sql(raw: Option<PgValue>) -> deserialize::Result<Self> {
+                    match raw.as_ref().map(|r| r.as_bytes()) {
                         #(Some(#variants_db) => Ok(#variants_rs),)*
                         Some(v) => Err(format!("Unrecognized enum variant: '{}'",
                                                String::from_utf8_lossy(v)).into()),
@@ -314,11 +314,14 @@ fn generate_mysql_impl(
         mod mysql_impl {
             use super::*;
             use diesel;
-            use diesel::mysql::Mysql;
+            use diesel::mysql::{Mysql, MysqlValue};
 
             impl HasSqlType<#diesel_mapping> for Mysql {
                 fn metadata(_lookup: &Self::MetadataLookup) -> Self::TypeMetadata {
-                    diesel::mysql::MysqlType::String
+                    diesel::mysql::MysqlTypeMetadata {
+                        data_type: diesel::mysql::MysqlType::String,
+                        is_unsigned: false
+                    }
                 }
             }
 
@@ -329,8 +332,8 @@ fn generate_mysql_impl(
             }
 
             impl FromSql<#diesel_mapping, Mysql> for #enum_ty {
-                fn from_sql(bytes: Option<&<Mysql as Backend>::RawValue>) -> deserialize::Result<Self> {
-                    match bytes {
+                fn from_sql(raw: Option<MysqlValue>) -> deserialize::Result<Self> {
+                    match raw.as_ref().map(|r| r.as_bytes()) {
                         #(Some(#variants_db) => Ok(#variants_rs),)*
                         Some(v) => Err(format!("Unrecognized enum variant: '{}'",
                                                String::from_utf8_lossy(v)).into()),
@@ -375,7 +378,7 @@ fn generate_sqlite_impl(
             }
 
             impl FromSql<#diesel_mapping, Sqlite> for #enum_ty {
-                fn from_sql(bytes: Option<&<Sqlite as Backend>::RawValue>) -> deserialize::Result<Self> {
+                fn from_sql(bytes: Option<backend::RawValue<Sqlite>>) -> deserialize::Result<Self> {
                     match bytes.map(|v| v.read_blob()) {
                         #(Some(#variants_db) => Ok(#variants_rs),)*
                         Some(blob) => Err(format!("Unexpected variant: {}", String::from_utf8_lossy(blob)).into()),
