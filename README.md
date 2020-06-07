@@ -136,7 +136,7 @@ You can override the `snake_case` assumption for the entire enum using the `#[Db
 | camelCase | BazQuxx | "bazQuxx" |
 | kebab-case | BazQuxx | "baz-quxx" |
 | PascalCase | BazQuxx | "BazQuxx" |
-| SCREAMING_SNAKE | BazQuxx | "BAZ_QUXX" |
+| SCREAMING_SNAKE_CASE | BazQuxx | "BAZ_QUXX" |
 | snake_case | BazQuxx | "baz_quxx" |
 | verbatim | Baz__quxx | "Baz__quxx" |
 
