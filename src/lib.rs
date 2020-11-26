@@ -187,7 +187,6 @@ fn generate_common_impl(
             type QueryId = #diesel_mapping;
             const HAS_STATIC_QUERY_ID: bool = true;
         }
-        impl SingleValue for #diesel_mapping {}
 
         impl AsExpression<#diesel_mapping> for #enum_ty {
             type Expression = Bound<#diesel_mapping, Self>;
