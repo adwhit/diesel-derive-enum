@@ -181,6 +181,7 @@ fn generate_common_impl(
         use diesel::query_builder::QueryId;
         use std::io::Write;
 
+        #[derive(SqlType)]
         pub struct #diesel_mapping;
         impl QueryId for #diesel_mapping {
             type QueryId = #diesel_mapping;
