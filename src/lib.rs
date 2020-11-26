@@ -177,7 +177,7 @@ fn generate_common_impl(
         use diesel::row::Row;
         use diesel::sql_types::*;
         use diesel::serialize::{self, ToSql, IsNull, Output};
-        use diesel::deserialize::{self, FromSql, FromSqlRow};
+        use diesel::deserialize::{self, FromSql};
         use diesel::query_builder::QueryId;
         use std::io::Write;
 
