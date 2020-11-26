@@ -310,10 +310,7 @@ fn generate_mysql_impl(
 
             impl HasSqlType<#diesel_mapping> for Mysql {
                 fn metadata(_lookup: &Self::MetadataLookup) -> Self::TypeMetadata {
-                    diesel::mysql::MysqlTypeMetadata {
-                        data_type: diesel::mysql::MysqlType::String,
-                        is_unsigned: false
-                    }
+                    diesel::mysql::MysqlType::Enum
                 }
             }
 
