@@ -275,12 +275,6 @@ fn generate_postgres_impl(
                 }
             }
 
-            impl FromSqlRow<#diesel_mapping, Pg> for #enum_ty {
-                fn build_from_row<T: Row<Pg>>(row: &mut T) -> deserialize::Result<Self> {
-                    FromSql::<#diesel_mapping, Pg>::from_sql(row.take())
-                }
-            }
-
             impl FromSql<#diesel_mapping, Pg> for #enum_ty {
                 fn from_sql(raw: Option<PgValue>) -> deserialize::Result<Self> {
                     match raw.as_ref().map(|r| r.as_bytes()) {
@@ -324,12 +318,6 @@ fn generate_mysql_impl(
                 }
             }
 
-            impl FromSqlRow<#diesel_mapping, Mysql> for #enum_ty {
-                fn build_from_row<T: Row<Mysql>>(row: &mut T) -> deserialize::Result<Self> {
-                    FromSql::<#diesel_mapping, Mysql>::from_sql(row.take())
-                }
-            }
-
             impl FromSql<#diesel_mapping, Mysql> for #enum_ty {
                 fn from_sql(raw: Option<MysqlValue>) -> deserialize::Result<Self> {
                     match raw.as_ref().map(|r| r.as_bytes()) {
@@ -367,12 +355,6 @@ fn generate_sqlite_impl(
             impl HasSqlType<#diesel_mapping> for Sqlite {
                 fn metadata(_lookup: &Self::MetadataLookup) -> Self::TypeMetadata {
                     diesel::sqlite::SqliteType::Text
-                }
-            }
-
-            impl FromSqlRow<#diesel_mapping, Sqlite> for #enum_ty {
-                fn build_from_row<T: Row<Sqlite>>(row: &mut T) -> deserialize::Result<Self> {
-                    FromSql::<#diesel_mapping, Sqlite>::from_sql(row.take())
                 }
             }
 
