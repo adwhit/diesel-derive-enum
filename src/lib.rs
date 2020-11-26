@@ -276,12 +276,11 @@ fn generate_postgres_impl(
             }
 
             impl FromSql<#diesel_mapping, Pg> for #enum_ty {
-                fn from_sql(raw: Option<PgValue>) -> deserialize::Result<Self> {
-                    match raw.as_ref().map(|r| r.as_bytes()) {
-                        #(Some(#variants_db) => Ok(#variants_rs),)*
-                        Some(v) => Err(format!("Unrecognized enum variant: '{}'",
+                fn from_sql(raw: PgValue) -> deserialize::Result<Self> {
+                    match raw.as_bytes() {
+                        #((#variants_db) => Ok(#variants_rs),)*
+                        v => Err(format!("Unrecognized enum variant: '{}'",
                                                String::from_utf8_lossy(v)).into()),
-                        None => Err("Unexpected null for non-null column".into()),
                     }
                 }
             }
@@ -319,12 +318,11 @@ fn generate_mysql_impl(
             }
 
             impl FromSql<#diesel_mapping, Mysql> for #enum_ty {
-                fn from_sql(raw: Option<MysqlValue>) -> deserialize::Result<Self> {
-                    match raw.as_ref().map(|r| r.as_bytes()) {
-                        #(Some(#variants_db) => Ok(#variants_rs),)*
-                        Some(v) => Err(format!("Unrecognized enum variant: '{}'",
+                fn from_sql(raw: MysqlValue) -> deserialize::Result<Self> {
+                    match raw.as_bytes() {
+                        #((#variants_db) => Ok(#variants_rs),)*
+                        v => Err(format!("Unrecognized enum variant: '{}'",
                                                String::from_utf8_lossy(v)).into()),
-                        None => Err("Unexpected null for non-null column".into()),
                     }
                 }
             }
@@ -359,11 +357,10 @@ fn generate_sqlite_impl(
             }
 
             impl FromSql<#diesel_mapping, Sqlite> for #enum_ty {
-                fn from_sql(bytes: Option<backend::RawValue<Sqlite>>) -> deserialize::Result<Self> {
+                fn from_sql(bytes: backend::RawValue<Sqlite>) -> deserialize::Result<Self> {
                     match bytes.map(|v| v.read_blob()) {
-                        #(Some(#variants_db) => Ok(#variants_rs),)*
-                        Some(blob) => Err(format!("Unexpected variant: {}", String::from_utf8_lossy(blob)).into()),
-                        None => Err("Unexpected null for non-null column".into()),
+                        #((#variants_db) => Ok(#variants_rs),)*
+                        blob => Err(format!("Unexpected variant: {}", String::from_utf8_lossy(blob)).into()),
                     }
                 }
             }
