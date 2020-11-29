@@ -39,8 +39,8 @@ pub fn derive(input: TokenStream) -> TokenStream {
             Span::call_site(),
             "derive(DbEnum) can only be applied to enums",
         )
-        .to_compile_error()
-        .into();
+            .to_compile_error()
+            .into();
     };
     quoted.into()
 }
@@ -278,7 +278,7 @@ fn generate_postgres_impl(
             impl FromSql<#diesel_mapping, Pg> for #enum_ty {
                 fn from_sql(raw: PgValue) -> deserialize::Result<Self> {
                     match raw.as_bytes() {
-                        #((#variants_db) => Ok(#variants_rs),)*
+                        #(#variants_db => Ok(#variants_rs),)*
                         v => Err(format!("Unrecognized enum variant: '{}'",
                                                String::from_utf8_lossy(v)).into()),
                     }
@@ -317,7 +317,7 @@ fn generate_mysql_impl(
             impl FromSql<#diesel_mapping, Mysql> for #enum_ty {
                 fn from_sql(raw: MysqlValue) -> deserialize::Result<Self> {
                     match raw.as_bytes() {
-                        #((#variants_db) => Ok(#variants_rs),)*
+                        #(#variants_db => Ok(#variants_rs),)*
                         v => Err(format!("Unrecognized enum variant: '{}'",
                                                String::from_utf8_lossy(v)).into()),
                     }
@@ -345,6 +345,7 @@ fn generate_sqlite_impl(
         mod sqlite_impl {
             use super::*;
             use diesel;
+            use diesel::sql_types;
             use diesel::sqlite::Sqlite;
 
             impl HasSqlType<#diesel_mapping> for Sqlite {
@@ -354,9 +355,10 @@ fn generate_sqlite_impl(
             }
 
             impl FromSql<#diesel_mapping, Sqlite> for #enum_ty {
-                fn from_sql(bytes: backend::RawValue<Sqlite>) -> deserialize::Result<Self> {
-                    match bytes.map(|v| v.read_blob()) {
-                        #((#variants_db) => Ok(#variants_rs),)*
+                fn from_sql(value: backend::RawValue<Sqlite>) -> deserialize::Result<Self> {
+                    let bytes = <Vec<u8> as FromSql<sql_types::Binary, Sqlite>>::from_sql(value)?;
+                    match bytes.as_slice() {
+                        #(#variants_db => Ok(#variants_rs),)*
                         blob => Err(format!("Unexpected variant: {}", String::from_utf8_lossy(blob)).into()),
                     }
                 }

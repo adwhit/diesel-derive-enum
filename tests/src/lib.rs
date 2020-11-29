@@ -9,3 +9,9 @@ mod pg_array;
 mod rename;
 mod simple;
 mod value_style;
+
+#[derive(Debug, PartialEq, diesel_derive_enum::DbEnum)]
+pub enum my_enum {
+    foo,
+    bazQuxx,
+}
