@@ -39,8 +39,8 @@ pub fn derive(input: TokenStream) -> TokenStream {
             Span::call_site(),
             "derive(DbEnum) can only be applied to enums",
         )
-        .to_compile_error()
-        .into();
+            .to_compile_error()
+            .into();
     };
     quoted.into()
 }
@@ -177,17 +177,16 @@ fn generate_common_impl(
         use diesel::row::Row;
         use diesel::sql_types::*;
         use diesel::serialize::{self, ToSql, IsNull, Output};
-        use diesel::deserialize::{self, FromSql, FromSqlRow};
+        use diesel::deserialize::{self, FromSql};
         use diesel::query_builder::QueryId;
         use std::io::Write;
 
+        #[derive(SqlType)]
         pub struct #diesel_mapping;
         impl QueryId for #diesel_mapping {
             type QueryId = #diesel_mapping;
             const HAS_STATIC_QUERY_ID: bool = true;
         }
-        impl NotNull for #diesel_mapping {}
-        impl SingleValue for #diesel_mapping {}
 
         impl AsExpression<#diesel_mapping> for #enum_ty {
             type Expression = Bound<#diesel_mapping, Self>;
@@ -276,19 +275,12 @@ fn generate_postgres_impl(
                 }
             }
 
-            impl FromSqlRow<#diesel_mapping, Pg> for #enum_ty {
-                fn build_from_row<T: Row<Pg>>(row: &mut T) -> deserialize::Result<Self> {
-                    FromSql::<#diesel_mapping, Pg>::from_sql(row.take())
-                }
-            }
-
             impl FromSql<#diesel_mapping, Pg> for #enum_ty {
-                fn from_sql(raw: Option<PgValue>) -> deserialize::Result<Self> {
-                    match raw.as_ref().map(|r| r.as_bytes()) {
-                        #(Some(#variants_db) => Ok(#variants_rs),)*
-                        Some(v) => Err(format!("Unrecognized enum variant: '{}'",
+                fn from_sql(raw: PgValue) -> deserialize::Result<Self> {
+                    match raw.as_bytes() {
+                        #(#variants_db => Ok(#variants_rs),)*
+                        v => Err(format!("Unrecognized enum variant: '{}'",
                                                String::from_utf8_lossy(v)).into()),
-                        None => Err("Unexpected null for non-null column".into()),
                     }
                 }
             }
@@ -318,26 +310,16 @@ fn generate_mysql_impl(
 
             impl HasSqlType<#diesel_mapping> for Mysql {
                 fn metadata(_lookup: &Self::MetadataLookup) -> Self::TypeMetadata {
-                    diesel::mysql::MysqlTypeMetadata {
-                        data_type: diesel::mysql::MysqlType::String,
-                        is_unsigned: false
-                    }
-                }
-            }
-
-            impl FromSqlRow<#diesel_mapping, Mysql> for #enum_ty {
-                fn build_from_row<T: Row<Mysql>>(row: &mut T) -> deserialize::Result<Self> {
-                    FromSql::<#diesel_mapping, Mysql>::from_sql(row.take())
+                    diesel::mysql::MysqlType::Enum
                 }
             }
 
             impl FromSql<#diesel_mapping, Mysql> for #enum_ty {
-                fn from_sql(raw: Option<MysqlValue>) -> deserialize::Result<Self> {
-                    match raw.as_ref().map(|r| r.as_bytes()) {
-                        #(Some(#variants_db) => Ok(#variants_rs),)*
-                        Some(v) => Err(format!("Unrecognized enum variant: '{}'",
+                fn from_sql(raw: MysqlValue) -> deserialize::Result<Self> {
+                    match raw.as_bytes() {
+                        #(#variants_db => Ok(#variants_rs),)*
+                        v => Err(format!("Unrecognized enum variant: '{}'",
                                                String::from_utf8_lossy(v)).into()),
-                        None => Err("Unexpected null for non-null column".into()),
                     }
                 }
             }
@@ -363,6 +345,7 @@ fn generate_sqlite_impl(
         mod sqlite_impl {
             use super::*;
             use diesel;
+            use diesel::sql_types;
             use diesel::sqlite::Sqlite;
 
             impl HasSqlType<#diesel_mapping> for Sqlite {
@@ -371,18 +354,12 @@ fn generate_sqlite_impl(
                 }
             }
 
-            impl FromSqlRow<#diesel_mapping, Sqlite> for #enum_ty {
-                fn build_from_row<T: Row<Sqlite>>(row: &mut T) -> deserialize::Result<Self> {
-                    FromSql::<#diesel_mapping, Sqlite>::from_sql(row.take())
-                }
-            }
-
             impl FromSql<#diesel_mapping, Sqlite> for #enum_ty {
-                fn from_sql(bytes: Option<backend::RawValue<Sqlite>>) -> deserialize::Result<Self> {
-                    match bytes.map(|v| v.read_blob()) {
-                        #(Some(#variants_db) => Ok(#variants_rs),)*
-                        Some(blob) => Err(format!("Unexpected variant: {}", String::from_utf8_lossy(blob)).into()),
-                        None => Err("Unexpected null for non-null column".into()),
+                fn from_sql(value: backend::RawValue<Sqlite>) -> deserialize::Result<Self> {
+                    let bytes = <Vec<u8> as FromSql<sql_types::Binary, Sqlite>>::from_sql(value)?;
+                    match bytes.as_slice() {
+                        #(#variants_db => Ok(#variants_rs),)*
+                        blob => Err(format!("Unexpected variant: {}", String::from_utf8_lossy(blob)).into()),
                     }
                 }
             }
