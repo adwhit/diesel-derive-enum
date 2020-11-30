@@ -39,8 +39,8 @@ pub fn derive(input: TokenStream) -> TokenStream {
             Span::call_site(),
             "derive(DbEnum) can only be applied to enums",
         )
-            .to_compile_error()
-            .into();
+        .to_compile_error()
+        .into();
     };
     quoted.into()
 }
