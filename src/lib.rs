@@ -288,8 +288,8 @@ fn generate_postgres_impl(
             impl Queryable<#diesel_mapping, Pg> for #enum_ty {
                 type Row = Self;
 
-                fn build(row: Self::Row) -> Self {
-                    row
+                fn build(row: Self::Row) -> deserialize::Result<Self> {
+                    Ok(row)
                 }
             }
         }
@@ -327,8 +327,8 @@ fn generate_mysql_impl(
             impl Queryable<#diesel_mapping, Mysql> for #enum_ty {
                 type Row = Self;
 
-                fn build(row: Self::Row) -> Self {
-                    row
+                fn build(row: Self::Row) -> deserialize::Result<Self> {
+                    Ok(row)
                 }
             }
         }
@@ -367,8 +367,8 @@ fn generate_sqlite_impl(
             impl Queryable<#diesel_mapping, Sqlite> for #enum_ty {
                 type Row = Self;
 
-                fn build(row: Self::Row) -> Self {
-                    row
+                fn build(row: Self::Row) -> deserialize::Result<Self> {
+                    Ok(row)
                 }
             }
         }
