@@ -119,10 +119,11 @@ fn generate_derive_enum_impls(
     let variants_rs: &[proc_macro2::TokenStream] = &variant_ids;
     let variants_db: &[LitByteStr] = &variants_db;
 
-    let common_impl = generate_common_impl(diesel_mapping, enum_ty, variants_rs, variants_db);
+    let common_impl =
+        generate_common_impl(db_type, diesel_mapping, enum_ty, variants_rs, variants_db);
 
     let pg_impl = if cfg!(feature = "postgres") {
-        generate_postgres_impl(db_type, diesel_mapping, enum_ty, variants_rs, variants_db)
+        generate_postgres_impl(diesel_mapping, enum_ty, variants_rs, variants_db)
     } else {
         quote! {}
     };
@@ -163,6 +164,7 @@ fn stylize_value(value: &str, style: CaseStyle) -> String {
 }
 
 fn generate_common_impl(
+    db_type: &str,
     diesel_mapping: &Ident,
     enum_ty: &Ident,
     variants_rs: &[proc_macro2::TokenStream],
@@ -182,6 +184,9 @@ fn generate_common_impl(
         use std::io::Write;
 
         #[derive(SqlType)]
+        #[postgres(type_name = #db_type)]
+        #[mysql_type = "Enum"]
+        #[sqlite_type = "Text"]
         pub struct #diesel_mapping;
         impl QueryId for #diesel_mapping {
             type QueryId = #diesel_mapping;
@@ -258,7 +263,6 @@ fn generate_common_impl(
 }
 
 fn generate_postgres_impl(
-    db_type: &str,
     diesel_mapping: &Ident,
     enum_ty: &Ident,
     variants_rs: &[proc_macro2::TokenStream],
@@ -268,12 +272,6 @@ fn generate_postgres_impl(
         mod pg_impl {
             use super::*;
             use diesel::pg::{Pg, PgValue};
-
-            impl HasSqlType<#diesel_mapping> for Pg {
-                fn metadata(lookup: &Self::MetadataLookup) -> Self::TypeMetadata {
-                    lookup.lookup_type(#db_type)
-                }
-            }
 
             impl FromSql<#diesel_mapping, Pg> for #enum_ty {
                 fn from_sql(raw: PgValue) -> deserialize::Result<Self> {
@@ -308,12 +306,6 @@ fn generate_mysql_impl(
             use diesel;
             use diesel::mysql::{Mysql, MysqlValue};
 
-            impl HasSqlType<#diesel_mapping> for Mysql {
-                fn metadata(_lookup: &Self::MetadataLookup) -> Self::TypeMetadata {
-                    diesel::mysql::MysqlType::Enum
-                }
-            }
-
             impl FromSql<#diesel_mapping, Mysql> for #enum_ty {
                 fn from_sql(raw: MysqlValue) -> deserialize::Result<Self> {
                     match raw.as_bytes() {
@@ -347,12 +339,6 @@ fn generate_sqlite_impl(
             use diesel;
             use diesel::sql_types;
             use diesel::sqlite::Sqlite;
-
-            impl HasSqlType<#diesel_mapping> for Sqlite {
-                fn metadata(_lookup: &Self::MetadataLookup) -> Self::TypeMetadata {
-                    diesel::sqlite::SqliteType::Text
-                }
-            }
 
             impl FromSql<#diesel_mapping, Sqlite> for #enum_ty {
                 fn from_sql(value: backend::RawValue<Sqlite>) -> deserialize::Result<Self> {
