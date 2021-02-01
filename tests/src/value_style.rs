@@ -67,11 +67,11 @@ fn stylized_round_trip() {
     connection
         .batch_execute(
             r#"
-        CREATE TYPE Stylized_External_Type AS ENUM (
+        CREATE TYPE "Stylized_External_Type" AS ENUM (
             'FirstVariant', 'SecondThing', 'ThirdItem', 'FourthValue', 'crazy fifth');
         CREATE TABLE test_value_style (
             id SERIAL PRIMARY KEY,
-            value Stylized_External_Type NOT NULL
+            value "Stylized_External_Type" NOT NULL
         );
     "#,
         )
@@ -85,7 +85,7 @@ fn stylized_round_trip() {
 
 #[test]
 #[cfg(feature = "mysql")]
-fn rename_round_trip() {
+fn stylized_round_trip() {
     use diesel::connection::SimpleConnection;
     use diesel::insert_into;
     let data = sample_data();
@@ -113,7 +113,7 @@ fn rename_round_trip() {
 
 #[test]
 #[cfg(feature = "sqlite")]
-fn rename_round_trip() {
+fn stylized_round_trip() {
     use diesel::connection::SimpleConnection;
     use diesel::insert_into;
     let data = sample_data();

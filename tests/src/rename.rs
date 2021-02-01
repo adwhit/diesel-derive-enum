@@ -50,10 +50,10 @@ fn rename_round_trip() {
     connection
         .batch_execute(
             r#"
-        CREATE TYPE Some_External_Type AS ENUM ('mod', 'type', 'with spaces');
+        CREATE TYPE "Some_External_Type" AS ENUM ('mod', 'type', 'with spaces');
         CREATE TABLE test_rename (
             id SERIAL PRIMARY KEY,
-            renamed Some_External_Type NOT NULL
+            renamed "Some_External_Type" NOT NULL
         );
     "#,
         )
