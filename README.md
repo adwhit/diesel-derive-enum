@@ -4,7 +4,7 @@
 
 Use Rust enums directly with [`diesel`](https://github.com/diesel-rs/diesel) ORM.
 
-The latest release, `1.1.0`, is tested against `diesel 1.4` and `rustc 1.39.0`. It _may_ work with older versions.
+The latest release, `1.1.1`, is tested against `diesel 1.4` and `rustc 1.39.0`. It _may_ work with older versions.
 
 *Note:* The current master branch tracks `diesel` master, and will **not** work with `diesel 1.x`.
 
@@ -109,17 +109,17 @@ Enums work slightly differently in each of the three databases.
   but does ensure data integrity. Note that if you somehow retreive some other invalid
   text as an enum, `diesel` will error at the point of deserialization.
 
-### Renaming
+### Type Names
 
 Diesel maintains a set of internal types which correspond one-to-one to the types available in various
 relational databases. Each internal type in turn maps to some kind of Rust native type.
-e.g. `diesel::types::Integer` maps to `i32`. So, when we create a new type in Postgres
-with `CREATE TYPE ...`, we must also create a corresponding type in Diesel, and then create
-a mapping to some native Rust type (our enum). Hence there are three types we need to be aware of.
+e.g. Postgres `INTEGER` maps to `diesel::types::Integer` maps to `i32`. Therefore when we create a new enum in Postgres
+with `CREATE TYPE ...`, we must also create a corresponding type in Diesel, then map it to
+some native Rust type (our enum). That is the purpose of this crate.
 
-By default, the Postgres and Diesel internal types are inferred from the name of the Rust enum.
-Specifically, we assume `MyEnum` corresponds to `my_enum` in Postgres and `MyEnumMapping` in Diesel.
-(The Diesel type is created by the plugin, the Postgres type must be created in SQL).
+If you are getting compilation errors, it could be that these three types names are not 'in sync'.
+By default, the database and Diesel internal types are inferred from the name of the Rust enum.
+Specifically, we assume `MyEnum` corresponds to `my_enum` in your database schema and `MyEnumMapping` in Diesel.
 
 These defaults can be overridden with the attributes `#[PgType = "..."]` and `#[DieselType = "..."]`.
 (The `PgType` annotation has no effect on `MySQL` or `sqlite`).

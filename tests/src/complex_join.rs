@@ -1,0 +1,114 @@
+use diesel::prelude::*;
+
+use crate::common::*;
+
+table! {
+    users (id) {
+        id -> Integer,
+    }
+}
+
+table! {
+    use diesel::sql_types::*;
+    use super::Server_status;
+    servers (id) {
+        id -> Integer,
+        user_id -> Integer,
+        status -> Server_status,
+    }
+}
+
+joinable!(servers -> users (user_id));
+allow_tables_to_appear_in_same_query!(users, servers);
+
+#[derive(diesel_derive_enum::DbEnum, Clone, Debug, PartialEq)]
+#[DieselType = "Server_status"]
+enum ServerStatus {
+    Started,
+    Stopped,
+}
+
+#[derive(Insertable, Identifiable, Queryable, PartialEq, Debug)]
+#[table_name = "users"]
+struct User {
+    id: i32,
+}
+
+#[derive(Insertable, Queryable, Associations, PartialEq, Debug)]
+#[belongs_to(User)]
+#[table_name = "servers"]
+struct Server {
+    id: i32,
+    user_id: i32,
+    status: ServerStatus,
+}
+
+#[cfg(feature = "postgres")]
+pub fn create_table(conn: &PgConnection) {
+    use diesel::connection::SimpleConnection;
+    conn.batch_execute(
+        r#"
+        CREATE TYPE server_status AS ENUM ('started', 'stopped');
+        CREATE TABLE users (
+            id SERIAL PRIMARY KEY
+        );
+        CREATE TABLE servers (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER REFERENCES users (id),
+            status server_status
+        );
+    "#,
+    )
+    .unwrap();
+}
+
+#[test]
+#[cfg(feature = "postgres")]
+fn test_complex_join() {
+    let conn = get_connection();
+    create_table(&conn);
+    let some_users = vec![User { id: 1 }, User { id: 2 }];
+    let some_servers = vec![
+        Server {
+            id: 1,
+            user_id: 1,
+            status: ServerStatus::Started,
+        },
+        Server {
+            id: 2,
+            user_id: 1,
+            status: ServerStatus::Stopped,
+        },
+        Server {
+            id: 3,
+            user_id: 2,
+            status: ServerStatus::Started,
+        },
+    ];
+    diesel::insert_into(users::table)
+        .values(&some_users)
+        .execute(&conn)
+        .unwrap();
+    diesel::insert_into(servers::table)
+        .values(&some_servers)
+        .execute(&conn)
+        .unwrap();
+    let (user, server) = users::table
+        .find(1)
+        .left_join(
+            servers::table.on(servers::dsl::user_id
+                .eq(users::dsl::id)
+                .and(servers::dsl::status.eq(ServerStatus::Started))),
+        )
+        .first::<(User, Option<Server>)>(&conn)
+        .unwrap();
+    assert_eq!(user, User { id: 1 });
+    assert_eq!(
+        server.unwrap(),
+        Server {
+            id: 1,
+            user_id: 1,
+            status: ServerStatus::Started
+        }
+    );
+}
