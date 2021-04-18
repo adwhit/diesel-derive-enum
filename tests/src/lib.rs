@@ -4,6 +4,7 @@
 #![allow(unused_imports)]
 
 mod common;
+mod complex_join;
 mod nullable;
 mod pg_array;
 mod rename;

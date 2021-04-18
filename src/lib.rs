@@ -183,7 +183,7 @@ fn generate_common_impl(
         use diesel::query_builder::QueryId;
         use std::io::Write;
 
-        #[derive(SqlType)]
+        #[derive(SqlType, Clone)]
         #[postgres(type_name = #db_type)]
         #[mysql_type = "Enum"]
         #[sqlite_type = "Text"]
