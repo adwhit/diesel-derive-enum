@@ -129,6 +129,8 @@ translated to `snake_case`.  These can be renamed with the inline annotation `#[
 
 See [this test](tests/src/rename.rs) for an example of renaming.
 
+See [this test](tests/src/schema.rs) for an example of specifying a schema.
+
 You can override the `snake_case` assumption for the entire enum using the `#[DbValueStyle = "..."]` attribute.  Individual variants can still be renamed using `#[db_rename = "..."]`.
 
 | DbValueStyle   | Variant | Value   |
