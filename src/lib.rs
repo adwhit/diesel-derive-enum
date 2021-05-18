@@ -8,11 +8,27 @@ use proc_macro2::{Ident, Span};
 use quote::quote;
 use syn::*;
 
-#[proc_macro_derive(DbEnum, attributes(PgType, DieselType, DbValueStyle, db_rename))]
+/// Implement necessary traits for adding a database enum as a new sql type.
+///
+/// # Attributes
+///
+/// ## Type attributes
+/// 
+/// * `#[PgType = "new_enum"]` specifies postgres name for the enum type. If ommitted, uses the enum's name in snake_case.
+/// * `#[PgSchema = "schema"]` specifies the postgres schema containing the enum type. If omitted, diesel uses the default search path, but this can cause problems with caching.
+/// * `#[DieselType = "NewEnumMapping"]` specifies the name for the diesel type. If omitted, uses the name + `Mapping`.
+/// * `#[DbValueStyle = "snake_case"]` specifies a renaming style from each of the rust enum variants to each of the database variants. Either `camelCase`, `kebab-case`, `PascalCase`, `SCREAMING_SNAKE_CASE`, `snake_case`, `verbatim`. If omitted, uses `snake_case`.
+///
+/// ## Variant attributes
+///
+/// * `#[db_rename = "variant"]` specifies the db name for a specific variant.
+#[proc_macro_derive(DbEnum, attributes(PgType, PgSchema, DieselType, DbValueStyle, db_rename))]
 pub fn derive(input: TokenStream) -> TokenStream {
     let input: DeriveInput = parse_macro_input!(input as DeriveInput);
     let db_type =
         type_from_attrs(&input.attrs, "PgType").unwrap_or(input.ident.to_string().to_snake_case());
+    let db_schema =
+        type_from_attrs(&input.attrs, "PgSchema");
     let diesel_mapping =
         type_from_attrs(&input.attrs, "DieselType").unwrap_or(format!("{}Mapping", input.ident));
 
@@ -29,6 +45,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
     {
         generate_derive_enum_impls(
             &db_type,
+            db_schema.as_deref(),
             &diesel_mapping,
             case_style,
             &input.ident,
@@ -87,6 +104,7 @@ impl CaseStyle {
 
 fn generate_derive_enum_impls(
     db_type: &str,
+    db_schema: Option<&str>,
     diesel_mapping: &Ident,
     case_style: CaseStyle,
     enum_ty: &Ident,
@@ -120,7 +138,7 @@ fn generate_derive_enum_impls(
     let variants_db: &[LitByteStr] = &variants_db;
 
     let common_impl =
-        generate_common_impl(db_type, diesel_mapping, enum_ty, variants_rs, variants_db);
+        generate_common_impl(db_type, db_schema, diesel_mapping, enum_ty, variants_rs, variants_db);
 
     let pg_impl = if cfg!(feature = "postgres") {
         generate_postgres_impl(diesel_mapping, enum_ty, variants_rs, variants_db)
@@ -165,11 +183,13 @@ fn stylize_value(value: &str, style: CaseStyle) -> String {
 
 fn generate_common_impl(
     db_type: &str,
+    db_schema: Option<&str>,
     diesel_mapping: &Ident,
     enum_ty: &Ident,
     variants_rs: &[proc_macro2::TokenStream],
     variants_db: &[LitByteStr],
 ) -> proc_macro2::TokenStream {
+    let db_schema = db_schema.into_iter();
     quote! {
         use super::*;
         use diesel::Queryable;
@@ -184,7 +204,7 @@ fn generate_common_impl(
         use std::io::Write;
 
         #[derive(SqlType, Clone)]
-        #[postgres(type_name = #db_type)]
+        #[postgres(type_name = #db_type, #(type_schema = #db_schema)*)]
         #[mysql_type = "Enum"]
         #[sqlite_type = "Text"]
         pub struct #diesel_mapping;
