@@ -13,7 +13,7 @@ use syn::*;
 /// # Attributes
 ///
 /// ## Type attributes
-/// 
+///
 /// * `#[PgType = "new_enum"]` specifies postgres name for the enum type. If ommitted, uses the enum's name in snake_case.
 /// * `#[PgSchema = "schema"]` specifies the postgres schema containing the enum type. If omitted, diesel uses the default search path, but this can cause problems with caching.
 /// * `#[DieselType = "NewEnumMapping"]` specifies the name for the diesel type. If omitted, uses the name + `Mapping`.
@@ -22,13 +22,15 @@ use syn::*;
 /// ## Variant attributes
 ///
 /// * `#[db_rename = "variant"]` specifies the db name for a specific variant.
-#[proc_macro_derive(DbEnum, attributes(PgType, PgSchema, DieselType, DbValueStyle, db_rename))]
+#[proc_macro_derive(
+    DbEnum,
+    attributes(PgType, PgSchema, DieselType, DbValueStyle, db_rename)
+)]
 pub fn derive(input: TokenStream) -> TokenStream {
     let input: DeriveInput = parse_macro_input!(input as DeriveInput);
     let db_type =
         type_from_attrs(&input.attrs, "PgType").unwrap_or(input.ident.to_string().to_snake_case());
-    let db_schema =
-        type_from_attrs(&input.attrs, "PgSchema");
+    let db_schema = type_from_attrs(&input.attrs, "PgSchema");
     let diesel_mapping =
         type_from_attrs(&input.attrs, "DieselType").unwrap_or(format!("{}Mapping", input.ident));
 
@@ -137,8 +139,14 @@ fn generate_derive_enum_impls(
     let variants_rs: &[proc_macro2::TokenStream] = &variant_ids;
     let variants_db: &[LitByteStr] = &variants_db;
 
-    let common_impl =
-        generate_common_impl(db_type, db_schema, diesel_mapping, enum_ty, variants_rs, variants_db);
+    let common_impl = generate_common_impl(
+        db_type,
+        db_schema,
+        diesel_mapping,
+        enum_ty,
+        variants_rs,
+        variants_db,
+    );
 
     let pg_impl = if cfg!(feature = "postgres") {
         generate_postgres_impl(diesel_mapping, enum_ty, variants_rs, variants_db)
