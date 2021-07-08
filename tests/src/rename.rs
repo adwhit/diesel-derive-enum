@@ -15,7 +15,6 @@ pub enum SomeEnum {
     WithASpace,
 }
 
-#[cfg(feature = "postgres")]
 #[derive(diesel::sql_types::SqlType)]
 #[postgres(type_name = "Some_External_Type")]
 pub struct Some_Internal_Type_Pg;

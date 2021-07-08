@@ -16,7 +16,6 @@ pub enum StylizedEnum {
     cRaZy_FiFtH,
 }
 
-#[cfg(feature = "postgres")]
 #[derive(diesel::sql_types::SqlType)]
 #[postgres(type_name = "Stylized_External_Type")]
 pub struct Stylized_Internal_Type_Pg;

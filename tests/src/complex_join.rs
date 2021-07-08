@@ -8,7 +8,6 @@ table! {
     }
 }
 
-#[cfg(feature = "postgres")]
 #[derive(diesel::sql_types::SqlType)]
 #[postgres(type_name = "server_status")]
 pub struct Server_status_pg;

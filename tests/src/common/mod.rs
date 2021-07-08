@@ -10,7 +10,6 @@ pub enum MyEnum {
     BazQuxx,
 }
 
-#[cfg(feature = "postgres")]
 #[derive(diesel::sql_types::SqlType)]
 #[postgres(type_name = "my_enum")]
 pub struct MyEnumPgMapping;
