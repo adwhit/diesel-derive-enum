@@ -4,7 +4,7 @@ use diesel::prelude::*;
 use crate::common::get_connection;
 
 #[derive(Debug, PartialEq, diesel_derive_enum::DbEnum)]
-#[PgSchema = "schema"]
+#[PgSchema = "diesel_derive_enum_test_schema"]
 pub enum SomeEnum {
     One,
     Two,
@@ -13,14 +13,14 @@ pub enum SomeEnum {
 table! {
     use diesel::sql_types::Integer;
     use super::SomeEnumMapping;
-    test_schema {
+    test_schema_table {
         id -> Integer,
         enum_ -> SomeEnumMapping,
     }
 }
 
 #[derive(Insertable, Queryable, Identifiable, Debug, PartialEq)]
-#[table_name = "test_schema"]
+#[table_name = "test_schema_table"]
 struct TestSchema {
     id: i32,
     enum_: SomeEnum,
@@ -42,21 +42,24 @@ fn schema_round_trip() {
         },
     ];
     let connection = get_connection();
-    connection
-        .batch_execute(
-            r#"
-        CREATE SCHEMA "schema";
-        CREATE TYPE "schema"."some_enum" AS ENUM ('one', 'two');
-        CREATE TABLE test_schema (
-            id SERIAL PRIMARY KEY,
-            enum_ "schema"."some_enum" NOT NULL
-        );
-    "#,
-        )
-        .unwrap();
-    let inserted = insert_into(test_schema::table)
-        .values(&data)
-        .get_results(&connection)
-        .unwrap();
+    let inserted = connection
+        .test_transaction(|| -> Result<_, diesel::result::Error> {
+            connection
+                .batch_execute(
+                    r#"
+                        CREATE SCHEMA "diesel_derive_enum_test_schema";
+                        CREATE TYPE "diesel_derive_enum_test_schema"."some_enum" AS ENUM ('one', 'two');
+                        CREATE TABLE test_schema_table (
+                            id SERIAL PRIMARY KEY,
+                            enum_ "diesel_derive_enum_test_schema"."some_enum" NOT NULL
+                        );
+                    "#,
+                ).
+                unwrap();
+            Ok(insert_into(test_schema_table::table)
+                .values(&data)
+                .get_results(&connection)
+                .unwrap())
+        });
     assert_eq!(data, inserted);
 }
