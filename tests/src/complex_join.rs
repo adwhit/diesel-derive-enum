@@ -59,7 +59,7 @@ struct Server {
 }
 
 #[cfg(feature = "postgres")]
-pub fn create_table(conn: &PgConnection) {
+pub fn create_table(conn: &mut PgConnection) {
     use diesel::connection::SimpleConnection;
     conn.batch_execute(
         r#"
@@ -80,8 +80,8 @@ pub fn create_table(conn: &PgConnection) {
 #[test]
 #[cfg(feature = "postgres")]
 fn test_complex_join() {
-    let conn = get_connection();
-    create_table(&conn);
+    let conn = &mut get_connection();
+    create_table(conn);
     let some_users = vec![User { id: 1 }, User { id: 2 }];
     let some_servers = vec![
         Server {
@@ -102,11 +102,11 @@ fn test_complex_join() {
     ];
     diesel::insert_into(users::table)
         .values(&some_users)
-        .execute(&conn)
+        .execute(conn)
         .unwrap();
     diesel::insert_into(servers::table)
         .values(&some_servers)
-        .execute(&conn)
+        .execute(conn)
         .unwrap();
     let (user, server) = users::table
         .find(1)
@@ -115,7 +115,7 @@ fn test_complex_join() {
                 .eq(users::dsl::id)
                 .and(servers::dsl::status.eq(ServerStatus::Started))),
         )
-        .first::<(User, Option<Server>)>(&conn)
+        .first::<(User, Option<Server>)>(conn)
         .unwrap();
     assert_eq!(user, User { id: 1 });
     assert_eq!(

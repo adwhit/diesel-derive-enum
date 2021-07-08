@@ -3,7 +3,7 @@ use diesel::prelude::*;
 
 use crate::common::*;
 
-pub fn create_table(conn: &PgConnection) {
+pub fn create_table(conn: &mut PgConnection) {
     use diesel::connection::SimpleConnection;
     conn.batch_execute(
         r#"
@@ -19,8 +19,8 @@ pub fn create_table(conn: &PgConnection) {
 
 #[test]
 fn enum_query() {
-    let connection = get_connection();
-    create_table(&connection);
+    let connection = &mut get_connection();
+    create_table(connection);
     let data_item = TestArray {
         id: 1,
         my_enum_arr: vec![MyEnum::Foo],
@@ -28,12 +28,12 @@ fn enum_query() {
     let data = vec![data_item];
     let ct = insert_into(test_array::table)
         .values(&data)
-        .execute(&connection)
+        .execute(connection)
         .unwrap();
     assert_eq!(data.len(), ct);
     let item = test_array::table
         .find(1)
-        .get_results::<TestArray>(&connection)
+        .get_results::<TestArray>(connection)
         .unwrap();
     assert_eq!(data, item);
 }

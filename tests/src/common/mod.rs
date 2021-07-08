@@ -44,7 +44,7 @@ pub struct Simple {
 pub fn get_connection() -> PgConnection {
     let database_url =
         ::std::env::var("PG_TEST_DATABASE_URL").expect("Env var PG_TEST_DATABASE_URL not set");
-    let conn = PgConnection::establish(&database_url)
+    let mut conn = PgConnection::establish(&database_url)
         .expect(&format!("Failed to connect to {}", database_url));
     conn.execute("SET search_path TO pg_temp;").unwrap();
     conn
@@ -91,7 +91,7 @@ pub fn sample_data() -> Vec<Simple> {
 }
 
 #[cfg(feature = "postgres")]
-pub fn create_table(conn: &PgConnection) {
+pub fn create_table(conn: &mut PgConnection) {
     use diesel::connection::SimpleConnection;
     conn.batch_execute(
         r#"
@@ -106,7 +106,7 @@ pub fn create_table(conn: &PgConnection) {
 }
 
 #[cfg(feature = "mysql")]
-pub fn create_table(conn: &MysqlConnection) {
+pub fn create_table(conn: &mut MysqlConnection) {
     use diesel::connection::SimpleConnection;
     conn.batch_execute(
         r#"
@@ -120,7 +120,7 @@ pub fn create_table(conn: &MysqlConnection) {
 }
 
 #[cfg(feature = "sqlite")]
-pub fn create_table(conn: &SqliteConnection) {
+pub fn create_table(conn: &mut SqliteConnection) {
     conn.execute(
         r#"
         CREATE TABLE test_simple (

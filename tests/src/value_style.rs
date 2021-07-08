@@ -76,7 +76,7 @@ fn stylized_round_trip() {
     use diesel::connection::SimpleConnection;
     use diesel::insert_into;
     let data = sample_data();
-    let connection = get_connection();
+    let connection = &mut get_connection();
     connection
         .batch_execute(
             r#"
@@ -91,7 +91,7 @@ fn stylized_round_trip() {
         .unwrap();
     let inserted = insert_into(test_value_style::table)
         .values(&data)
-        .get_results(&connection)
+        .get_results(connection)
         .unwrap();
     assert_eq!(data, inserted);
 }
@@ -102,7 +102,7 @@ fn stylized_round_trip() {
     use diesel::connection::SimpleConnection;
     use diesel::insert_into;
     let data = sample_data();
-    let connection = get_connection();
+    let connection = &mut get_connection();
     connection
         .batch_execute(
             r#"
@@ -116,10 +116,10 @@ fn stylized_round_trip() {
         .unwrap();
     insert_into(test_value_style::table)
         .values(&data)
-        .execute(&connection)
+        .execute(connection)
         .unwrap();
     let inserted = test_value_style::table
-        .load::<TestStylized>(&connection)
+        .load::<TestStylized>(connection)
         .unwrap();
     assert_eq!(data, inserted);
 }
@@ -130,7 +130,7 @@ fn stylized_round_trip() {
     use diesel::connection::SimpleConnection;
     use diesel::insert_into;
     let data = sample_data();
-    let connection = get_connection();
+    let connection = &mut get_connection();
     connection
         .batch_execute(
             r#"
@@ -145,10 +145,10 @@ fn stylized_round_trip() {
         .unwrap();
     insert_into(test_value_style::table)
         .values(&data)
-        .execute(&connection)
+        .execute(connection)
         .unwrap();
     let inserted = test_value_style::table
-        .load::<TestStylized>(&connection)
+        .load::<TestStylized>(connection)
         .unwrap();
     assert_eq!(data, inserted);
 }

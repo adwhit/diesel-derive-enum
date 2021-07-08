@@ -59,7 +59,7 @@ fn rename_round_trip() {
             renamed: SomeEnum::WithASpace,
         },
     ];
-    let connection = get_connection();
+    let connection = &mut get_connection();
     connection
         .batch_execute(
             r#"
@@ -73,7 +73,7 @@ fn rename_round_trip() {
         .unwrap();
     let inserted = insert_into(test_rename::table)
         .values(&data)
-        .get_results(&connection)
+        .get_results(connection)
         .unwrap();
     assert_eq!(data, inserted);
 }
@@ -93,7 +93,7 @@ fn rename_round_trip() {
             renamed: SomeEnum::WithASpace,
         },
     ];
-    let connection = get_connection();
+    let connection = &mut get_connection();
     connection
         .batch_execute(
             r#"
@@ -106,8 +106,8 @@ fn rename_round_trip() {
         .unwrap();
     insert_into(test_rename::table)
         .values(&data)
-        .execute(&connection)
+        .execute(connection)
         .unwrap();
-    let inserted = test_rename::table.load::<TestRename>(&connection).unwrap();
+    let inserted = test_rename::table.load::<TestRename>(connection).unwrap();
     assert_eq!(data, inserted);
 }
