@@ -3,6 +3,16 @@ use diesel::prelude::*;
 
 use crate::common::*;
 
+#[cfg(feature = "postgres")]
+table! {
+    use diesel::sql_types::{Integer, Nullable};
+    use super::MyEnumPgMapping;
+    test_nullable {
+        id -> Integer,
+        my_enum -> Nullable<MyEnumPgMapping>,
+    }
+}
+#[cfg(not(feature = "postgres"))]
 table! {
     use diesel::sql_types::{Integer, Nullable};
     use super::MyEnumMapping;

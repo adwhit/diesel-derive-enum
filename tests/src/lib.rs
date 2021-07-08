@@ -8,6 +8,5 @@ mod complex_join;
 mod nullable;
 mod pg_array;
 mod rename;
-mod schema;
 mod simple;
 mod value_style;

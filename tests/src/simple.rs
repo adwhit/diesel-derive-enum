@@ -80,12 +80,27 @@ fn sqlite_invalid_enum() {
 // (but we won't actually bother round-tripping)
 
 #[derive(Debug, PartialEq, diesel_derive_enum::DbEnum)]
+#[DieselExistingType = "MyEnumPgMapping"]
 pub enum my_enum {
     foo,
     bar,
     bazQuxx,
 }
 
+#[cfg(feature = "postgres")]
+#[derive(diesel::sql_types::SqlType)]
+#[postgres(type_name = "my_enum")]
+pub struct MyEnumPgMapping;
+#[cfg(feature = "postgres")]
+table! {
+    use diesel::sql_types::Integer;
+    use super::MyEnumPgMapping;
+    test_snakey {
+        id -> Integer,
+        my_enum -> MyEnumPgMapping,
+    }
+}
+#[cfg(not(feature = "postgres"))]
 table! {
     use diesel::sql_types::Integer;
     use super::my_enumMapping;

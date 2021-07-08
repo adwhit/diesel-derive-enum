@@ -3,12 +3,28 @@ use diesel::prelude::*;
 use diesel_derive_enum::DbEnum;
 
 #[derive(Debug, PartialEq, DbEnum, Clone)]
+#[DieselExistingType = "MyEnumPgMapping"]
 pub enum MyEnum {
     Foo,
     Bar,
     BazQuxx,
 }
 
+#[cfg(feature = "postgres")]
+#[derive(diesel::sql_types::SqlType)]
+#[postgres(type_name = "my_enum")]
+pub struct MyEnumPgMapping;
+#[cfg(feature = "postgres")]
+table! {
+    use diesel::sql_types::Integer;
+    use super::MyEnumPgMapping;
+    test_simple {
+        id -> Integer,
+        my_enum -> MyEnumPgMapping,
+    }
+}
+
+#[cfg(not(feature = "postgres"))]
 table! {
     use diesel::sql_types::Integer;
     use super::MyEnumMapping;

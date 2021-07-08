@@ -8,6 +8,21 @@ table! {
     }
 }
 
+#[cfg(feature = "postgres")]
+#[derive(diesel::sql_types::SqlType)]
+#[postgres(type_name = "server_status")]
+pub struct Server_status_pg;
+#[cfg(feature = "postgres")]
+table! {
+    use diesel::sql_types::*;
+    use super::Server_status_pg;
+    servers (id) {
+        id -> Integer,
+        user_id -> Integer,
+        status -> Server_status_pg,
+    }
+}
+#[cfg(not(feature = "postgres"))]
 table! {
     use diesel::sql_types::*;
     use super::Server_status;
@@ -23,6 +38,7 @@ allow_tables_to_appear_in_same_query!(users, servers);
 
 #[derive(diesel_derive_enum::DbEnum, Clone, Debug, PartialEq)]
 #[DieselType = "Server_status"]
+#[DieselExistingType = "Server_status_pg"]
 enum ServerStatus {
     Started,
     Stopped,

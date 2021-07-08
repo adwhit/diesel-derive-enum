@@ -4,8 +4,8 @@ use diesel::prelude::*;
 use crate::common::get_connection;
 
 #[derive(Debug, PartialEq, diesel_derive_enum::DbEnum)]
-#[PgType = "Stylized_External_Type"]
 #[DieselType = "Stylized_Internal_Type"]
+#[DieselExistingType = "Stylized_Internal_Type_Pg"]
 #[DbValueStyle = "PascalCase"]
 pub enum StylizedEnum {
     FirstVariant,
@@ -16,6 +16,20 @@ pub enum StylizedEnum {
     cRaZy_FiFtH,
 }
 
+#[cfg(feature = "postgres")]
+#[derive(diesel::sql_types::SqlType)]
+#[postgres(type_name = "Stylized_External_Type")]
+pub struct Stylized_Internal_Type_Pg;
+#[cfg(feature = "postgres")]
+table! {
+    use diesel::sql_types::Integer;
+    use super::Stylized_Internal_Type_Pg;
+    test_value_style {
+        id -> Integer,
+        value -> Stylized_Internal_Type_Pg,
+    }
+}
+#[cfg(not(feature = "postgres"))]
 table! {
     use diesel::sql_types::Integer;
     use super::Stylized_Internal_Type;

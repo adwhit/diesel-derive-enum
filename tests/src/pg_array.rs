@@ -40,12 +40,13 @@ fn enum_query() {
     assert_eq!(data, item);
 }
 
+#[cfg(feature = "postgres")]
 table! {
     use diesel::sql_types::{Integer, Array};
-    use super::MyEnumMapping;
+    use super::MyEnumPgMapping;
     test_array {
         id -> Integer,
-        my_enum_arr -> Array<MyEnumMapping>,
+        my_enum_arr -> Array<MyEnumPgMapping>,
     }
 }
 

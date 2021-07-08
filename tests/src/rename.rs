@@ -4,8 +4,8 @@ use diesel::prelude::*;
 use crate::common::get_connection;
 
 #[derive(Debug, PartialEq, diesel_derive_enum::DbEnum)]
-#[PgType = "Some_External_Type"]
 #[DieselType = "Some_Internal_Type"]
+#[DieselExistingType = "Some_Internal_Type_Pg"]
 pub enum SomeEnum {
     #[db_rename = "mod"]
     Mod,
@@ -15,6 +15,20 @@ pub enum SomeEnum {
     WithASpace,
 }
 
+#[cfg(feature = "postgres")]
+#[derive(diesel::sql_types::SqlType)]
+#[postgres(type_name = "Some_External_Type")]
+pub struct Some_Internal_Type_Pg;
+#[cfg(feature = "postgres")]
+table! {
+    use diesel::sql_types::Integer;
+    use super::Some_Internal_Type_Pg;
+    test_rename {
+        id -> Integer,
+        renamed -> Some_Internal_Type_Pg,
+    }
+}
+#[cfg(not(feature = "postgres"))]
 table! {
     use diesel::sql_types::Integer;
     use super::Some_Internal_Type;
