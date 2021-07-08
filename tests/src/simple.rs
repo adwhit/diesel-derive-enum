@@ -6,15 +6,15 @@ use crate::common::*;
 #[test]
 #[cfg(any(feature = "sqlite", feature = "postgres", feature = "mysql"))]
 fn enum_round_trip() {
-    let connection = get_connection();
-    create_table(&connection);
+    let connection = &mut get_connection();
+    create_table(connection);
     let data = sample_data();
     let ct = insert_into(test_simple::table)
         .values(&data)
-        .execute(&connection)
+        .execute(connection)
         .unwrap();
     assert_eq!(data.len(), ct);
-    let items = test_simple::table.load::<Simple>(&connection).unwrap();
+    let items = test_simple::table.load::<Simple>(connection).unwrap();
     assert_eq!(data, items);
 }
 
@@ -22,18 +22,18 @@ fn enum_round_trip() {
 #[cfg(any(feature = "sqlite", feature = "postgres", feature = "mysql"))]
 fn filter_by_enum() {
     use crate::common::test_simple::dsl::*;
-    let connection = get_connection();
-    create_table(&connection);
+    let connection = &mut get_connection();
+    create_table(connection);
     let data = sample_data();
     let ct = insert_into(test_simple)
         .values(&data)
-        .execute(&connection)
+        .execute(connection)
         .unwrap();
     assert_eq!(data.len(), ct);
     let results = test_simple
         .filter(my_enum.eq(MyEnum::Foo))
         .limit(2)
-        .load::<Simple>(&connection)
+        .load::<Simple>(connection)
         .unwrap();
     assert_eq!(
         results,
@@ -53,7 +53,7 @@ fn filter_by_enum() {
 #[test]
 #[cfg(feature = "sqlite")]
 fn sqlite_invalid_enum() {
-    let connection = get_connection();
+    let connection = &mut get_connection();
     let data = sample_data();
     connection
         .execute(
@@ -67,7 +67,7 @@ fn sqlite_invalid_enum() {
         .unwrap();
     if let Err(e) = insert_into(test_simple::table)
         .values(&data)
-        .execute(&connection)
+        .execute(connection)
     {
         let err = format!("{}", e);
         assert!(err.contains("CHECK constraint failed"));
@@ -80,12 +80,26 @@ fn sqlite_invalid_enum() {
 // (but we won't actually bother round-tripping)
 
 #[derive(Debug, PartialEq, diesel_derive_enum::DbEnum)]
+#[DieselExistingType = "MyEnumPgMapping"]
 pub enum my_enum {
     foo,
     bar,
     bazQuxx,
 }
 
+#[derive(diesel::sql_types::SqlType)]
+#[postgres(type_name = "my_enum")]
+pub struct MyEnumPgMapping;
+#[cfg(feature = "postgres")]
+table! {
+    use diesel::sql_types::Integer;
+    use super::MyEnumPgMapping;
+    test_snakey {
+        id -> Integer,
+        my_enum -> MyEnumPgMapping,
+    }
+}
+#[cfg(not(feature = "postgres"))]
 table! {
     use diesel::sql_types::Integer;
     use super::my_enumMapping;

@@ -6,8 +6,8 @@
 mod common;
 mod complex_join;
 mod nullable;
+#[cfg(feature = "postgres")]
 mod pg_array;
 mod rename;
-mod schema;
 mod simple;
 mod value_style;

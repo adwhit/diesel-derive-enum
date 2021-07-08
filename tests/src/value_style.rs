@@ -4,8 +4,8 @@ use diesel::prelude::*;
 use crate::common::get_connection;
 
 #[derive(Debug, PartialEq, diesel_derive_enum::DbEnum)]
-#[PgType = "Stylized_External_Type"]
 #[DieselType = "Stylized_Internal_Type"]
+#[DieselExistingType = "Stylized_Internal_Type_Pg"]
 #[DbValueStyle = "PascalCase"]
 pub enum StylizedEnum {
     FirstVariant,
@@ -16,6 +16,19 @@ pub enum StylizedEnum {
     cRaZy_FiFtH,
 }
 
+#[derive(diesel::sql_types::SqlType)]
+#[postgres(type_name = "Stylized_External_Type")]
+pub struct Stylized_Internal_Type_Pg;
+#[cfg(feature = "postgres")]
+table! {
+    use diesel::sql_types::Integer;
+    use super::Stylized_Internal_Type_Pg;
+    test_value_style {
+        id -> Integer,
+        value -> Stylized_Internal_Type_Pg,
+    }
+}
+#[cfg(not(feature = "postgres"))]
 table! {
     use diesel::sql_types::Integer;
     use super::Stylized_Internal_Type;
@@ -63,7 +76,7 @@ fn stylized_round_trip() {
     use diesel::connection::SimpleConnection;
     use diesel::insert_into;
     let data = sample_data();
-    let connection = get_connection();
+    let connection = &mut get_connection();
     connection
         .batch_execute(
             r#"
@@ -78,7 +91,7 @@ fn stylized_round_trip() {
         .unwrap();
     let inserted = insert_into(test_value_style::table)
         .values(&data)
-        .get_results(&connection)
+        .get_results(connection)
         .unwrap();
     assert_eq!(data, inserted);
 }
@@ -89,7 +102,7 @@ fn stylized_round_trip() {
     use diesel::connection::SimpleConnection;
     use diesel::insert_into;
     let data = sample_data();
-    let connection = get_connection();
+    let connection = &mut get_connection();
     connection
         .batch_execute(
             r#"
@@ -103,10 +116,10 @@ fn stylized_round_trip() {
         .unwrap();
     insert_into(test_value_style::table)
         .values(&data)
-        .execute(&connection)
+        .execute(connection)
         .unwrap();
     let inserted = test_value_style::table
-        .load::<TestStylized>(&connection)
+        .load::<TestStylized>(connection)
         .unwrap();
     assert_eq!(data, inserted);
 }
@@ -117,7 +130,7 @@ fn stylized_round_trip() {
     use diesel::connection::SimpleConnection;
     use diesel::insert_into;
     let data = sample_data();
-    let connection = get_connection();
+    let connection = &mut get_connection();
     connection
         .batch_execute(
             r#"
@@ -132,10 +145,10 @@ fn stylized_round_trip() {
         .unwrap();
     insert_into(test_value_style::table)
         .values(&data)
-        .execute(&connection)
+        .execute(connection)
         .unwrap();
     let inserted = test_value_style::table
-        .load::<TestStylized>(&connection)
+        .load::<TestStylized>(connection)
         .unwrap();
     assert_eq!(data, inserted);
 }

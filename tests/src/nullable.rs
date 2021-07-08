@@ -3,6 +3,16 @@ use diesel::prelude::*;
 
 use crate::common::*;
 
+#[cfg(feature = "postgres")]
+table! {
+    use diesel::sql_types::{Integer, Nullable};
+    use super::MyEnumPgMapping;
+    test_nullable {
+        id -> Integer,
+        my_enum -> Nullable<MyEnumPgMapping>,
+    }
+}
+#[cfg(not(feature = "postgres"))]
 table! {
     use diesel::sql_types::{Integer, Nullable};
     use super::MyEnumMapping;
@@ -27,7 +37,7 @@ struct MaybeNullable {
 }
 
 #[cfg(feature = "postgres")]
-pub fn create_null_table(conn: &PgConnection) {
+pub fn create_null_table(conn: &mut PgConnection) {
     use diesel::connection::SimpleConnection;
     conn.batch_execute(
         r#"
@@ -43,7 +53,7 @@ pub fn create_null_table(conn: &PgConnection) {
 }
 
 #[cfg(feature = "mysql")]
-pub fn create_null_table(conn: &MysqlConnection) {
+pub fn create_null_table(conn: &mut MysqlConnection) {
     use diesel::connection::SimpleConnection;
     conn.batch_execute(
         r#"
@@ -57,7 +67,7 @@ pub fn create_null_table(conn: &MysqlConnection) {
 }
 
 #[cfg(feature = "sqlite")]
-pub fn create_null_table(conn: &SqliteConnection) {
+pub fn create_null_table(conn: &mut SqliteConnection) {
     conn.execute(
         r#"
         CREATE TABLE test_nullable (
@@ -71,8 +81,8 @@ pub fn create_null_table(conn: &SqliteConnection) {
 
 #[test]
 fn nullable_enum_round_trip() {
-    let connection = get_connection();
-    create_null_table(&connection);
+    let connection = &mut get_connection();
+    create_null_table(connection);
     let data = vec![
         Nullable {
             id: 1,
@@ -84,16 +94,16 @@ fn nullable_enum_round_trip() {
         },
     ];
     let sql = insert_into(test_nullable::table).values(&data);
-    let ct = sql.execute(&connection).unwrap();
+    let ct = sql.execute(connection).unwrap();
     assert_eq!(data.len(), ct);
-    let items = test_nullable::table.load::<Nullable>(&connection).unwrap();
+    let items = test_nullable::table.load::<Nullable>(connection).unwrap();
     assert_eq!(data, items);
 }
 
 #[test]
 fn not_nullable_enum_round_trip() {
-    let connection = get_connection();
-    create_null_table(&connection);
+    let connection = &mut get_connection();
+    create_null_table(connection);
     let data = vec![
         MaybeNullable {
             id: 1,
@@ -106,7 +116,7 @@ fn not_nullable_enum_round_trip() {
     ];
     let ct = insert_into(test_nullable::table)
         .values(&data)
-        .execute(&connection)
+        .execute(connection)
         .unwrap();
     assert_eq!(data.len(), ct);
 }
