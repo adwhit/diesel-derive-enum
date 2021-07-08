@@ -239,8 +239,6 @@ fn generate_common_impls(
     variants_db: &[LitByteStr],
 ) -> proc_macro2::TokenStream {
     quote! {
-
-
         impl QueryId for #diesel_mapping {
             type QueryId = #diesel_mapping;
             const HAS_STATIC_QUERY_ID: bool = true;
@@ -325,6 +323,12 @@ fn generate_postgres_impl(
         mod pg_impl {
             use super::*;
             use diesel::pg::{Pg, PgValue};
+
+            impl Clone for #diesel_mapping {
+                fn clone(&self) -> Self {
+                    #diesel_mapping
+                }
+            }
 
             impl FromSql<#diesel_mapping, Pg> for #enum_ty {
                 fn from_sql(raw: PgValue) -> deserialize::Result<Self> {
