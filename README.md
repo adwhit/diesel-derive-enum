@@ -106,7 +106,7 @@ Enums work slightly differently in each of the three databases.
 * sqlite does not have enums - in fact, it does [not really have types](https://dba.stackexchange.com/questions/106364/text-string-stored-in-sqlite-integer-column);
   you can store any kind of data in any column. Instead we emulate static checking by
   adding the `CHECK` command, as per above. This does not give a more compact encoding
-  but does ensure data integrity. Note that if you somehow retreive some other invalid
+  but does ensure data integrity. Note that if you somehow retrieve some other invalid
   text as an enum, `diesel` will error at the point of deserialization.
 
 ### Type Names
