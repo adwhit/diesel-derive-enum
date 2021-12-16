@@ -184,15 +184,16 @@ fn generate_derive_enum_impls(
 
     let imports = quote! {
         use super::*;
-        use diesel::Queryable;
-        use diesel::backend::{self, Backend};
-        use diesel::expression::AsExpression;
-        use diesel::expression::bound::Bound;
-        use diesel::row::Row;
-        use diesel::sql_types::*;
-        use diesel::serialize::{self, ToSql, IsNull, Output};
-        use diesel::deserialize::{self, FromSql};
-        use diesel::query_builder::QueryId;
+        use diesel::{
+            backend::{self, Backend},
+            deserialize::{self, FromSql},
+            expression::{bound::Bound, AsExpression},
+            query_builder::{bind_collector::RawBytesBindCollector, QueryId},
+            row::Row,
+            serialize::{self, IsNull, Output, ToSql},
+            sql_types::*,
+            Queryable,
+        };
         use std::io::Write;
     };
 
@@ -292,11 +293,14 @@ fn generate_common_impls(
             }
         }
 
-        impl<DB: Backend> ToSql<#diesel_mapping, DB> for #enum_ty {
-            fn to_sql<W: Write>(&self, out: &mut Output<W, DB>) -> serialize::Result {
-                match *self {
-                    #(#variants_rs => out.write_all(#variants_db)?,)*
-                }
+        impl<DB: Backend> ToSql<#diesel_mapping, DB> for #enum_ty
+        where
+            DB: Backend<BindCollector = RawBytesBindCollector<DB>>,
+        {
+            fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, DB>) -> serialize::Result {
+                out.write_all(match *self {
+                    #(#variants_rs => #variants_db,)*
+                })?;
                 Ok(IsNull::No)
             }
         }
@@ -306,7 +310,7 @@ fn generate_common_impls(
             DB: Backend,
             Self: ToSql<#diesel_mapping, DB>,
         {
-            fn to_sql<W: ::std::io::Write>(&self, out: &mut Output<W, DB>) -> serialize::Result {
+            fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, DB>) -> serialize::Result {
                 ToSql::<#diesel_mapping, DB>::to_sql(self, out)
             }
         }
@@ -404,6 +408,15 @@ fn generate_sqlite_impl(
                         #(#variants_db => Ok(#variants_rs),)*
                         blob => Err(format!("Unexpected variant: {}", String::from_utf8_lossy(blob)).into()),
                     }
+                }
+            }
+
+            impl ToSql<#diesel_mapping, Sqlite> for #enum_ty {
+                fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Sqlite>) -> serialize::Result {
+                    out.set_borrowed_string(match *self {
+                        #(#variants_rs => #variants_db,)*
+                    });
+                    Ok(IsNull::No)
                 }
             }
 
