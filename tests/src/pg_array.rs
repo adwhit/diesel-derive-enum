@@ -3,8 +3,7 @@ use diesel::prelude::*;
 
 use crate::common::*;
 
-#[cfg(feature = "postgres")]
-pub fn create_table(conn: &PgConnection) {
+pub fn create_table(conn: &mut PgConnection) {
     use diesel::connection::SimpleConnection;
     conn.batch_execute(
         r#"
@@ -19,10 +18,9 @@ pub fn create_table(conn: &PgConnection) {
 }
 
 #[test]
-#[cfg(feature = "postgres")]
 fn enum_query() {
-    let connection = get_connection();
-    create_table(&connection);
+    let connection = &mut get_connection();
+    create_table(connection);
     let data_item = TestArray {
         id: 1,
         my_enum_arr: vec![MyEnum::Foo],
@@ -30,22 +28,22 @@ fn enum_query() {
     let data = vec![data_item];
     let ct = insert_into(test_array::table)
         .values(&data)
-        .execute(&connection)
+        .execute(connection)
         .unwrap();
     assert_eq!(data.len(), ct);
     let item = test_array::table
         .find(1)
-        .get_results::<TestArray>(&connection)
+        .get_results::<TestArray>(connection)
         .unwrap();
     assert_eq!(data, item);
 }
 
 table! {
     use diesel::sql_types::{Integer, Array};
-    use super::MyEnumMapping;
+    use super::MyEnumPgMapping;
     test_array {
         id -> Integer,
-        my_enum_arr -> Array<MyEnumMapping>,
+        my_enum_arr -> Array<MyEnumPgMapping>,
     }
 }
 
