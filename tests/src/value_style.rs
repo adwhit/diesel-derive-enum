@@ -17,7 +17,7 @@ pub enum StylizedEnum {
 }
 
 #[derive(diesel::sql_types::SqlType)]
-#[postgres(type_name = "Stylized_External_Type")]
+#[diesel(postgres_type(name = "Stylized_External_Type"))]
 pub struct Stylized_Internal_Type_Pg;
 #[cfg(feature = "postgres")]
 table! {
@@ -39,7 +39,7 @@ table! {
 }
 
 #[derive(Insertable, Queryable, Identifiable, Debug, PartialEq)]
-#[table_name = "test_value_style"]
+#[diesel(table_name = test_value_style)]
 struct TestStylized {
     id: i32,
     value: StylizedEnum,

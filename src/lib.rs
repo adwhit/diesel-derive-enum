@@ -227,8 +227,8 @@ fn stylize_value(value: &str, style: CaseStyle) -> String {
 fn generate_common_diesel_mapping(new_diesel_mapping: &Ident) -> proc_macro2::TokenStream {
     quote! {
         #[derive(SqlType, Clone)]
-        #[mysql_type = "Enum"]
-        #[sqlite_type = "Text"]
+        #[diesel(mysql_type(name = "Enum"))]
+        #[diesel(sqlite_type(name = "Text"))]
         pub struct #new_diesel_mapping;
     }
 }

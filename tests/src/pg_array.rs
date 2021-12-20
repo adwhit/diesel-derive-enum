@@ -48,7 +48,7 @@ table! {
 }
 
 #[derive(Insertable, Queryable, Identifiable, Debug, Clone, PartialEq)]
-#[table_name = "test_array"]
+#[diesel(table_name = test_array)]
 struct TestArray {
     id: i32,
     my_enum_arr: Vec<MyEnum>,

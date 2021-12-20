@@ -16,7 +16,7 @@ pub enum SomeEnum {
 }
 
 #[derive(diesel::sql_types::SqlType)]
-#[postgres(type_name = "Some_External_Type")]
+#[diesel(postgres_type(name = "Some_External_Type"))]
 pub struct Some_Internal_Type_Pg;
 #[cfg(feature = "postgres")]
 table! {
@@ -38,7 +38,7 @@ table! {
 }
 
 #[derive(Insertable, Queryable, Identifiable, Debug, PartialEq)]
-#[table_name = "test_rename"]
+#[diesel(table_name = test_rename)]
 struct TestRename {
     id: i32,
     renamed: SomeEnum,
