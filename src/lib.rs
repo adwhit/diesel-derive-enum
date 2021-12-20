@@ -125,19 +125,19 @@ fn generate_derive_enum_impls(
         })
         .collect();
 
-    let variants_db: Vec<LitByteStr> = variants
+    let variants_db: Vec<String> = variants
         .iter()
         .map(|variant| {
-            let dbname = type_from_attrs(&variant.attrs, "db_rename")
-                .unwrap_or(stylize_value(&variant.ident.to_string(), case_style));
-            LitByteStr::new(&dbname.into_bytes(), Span::call_site())
+            type_from_attrs(&variant.attrs, "db_rename")
+                .unwrap_or(stylize_value(&variant.ident.to_string(), case_style))
         })
         .collect();
+    let variants_db_bytes: Vec<LitByteStr> = variants_db
+        .iter()
+        .map(|variant_str| LitByteStr::new(variant_str.as_bytes(), Span::call_site()))
+        .collect();
 
-    let variants_rs: &[proc_macro2::TokenStream] = &variant_ids;
-    let variants_db: &[LitByteStr] = &variants_db;
-
-    let common = generate_common(enum_ty, variants_rs, variants_db);
+    let common = generate_common(enum_ty, &variant_ids, &variants_db, &variants_db_bytes);
     let (common_diesel_mapping, common_diesel_mapping_use) =
         if cfg!(feature = "mysql") || cfg!(feature = "sqlite") {
             let new_diesel_mapping_impl = generate_common_diesel_mapping(new_diesel_mapping);
@@ -224,10 +224,11 @@ fn stylize_value(value: &str, style: CaseStyle) -> String {
 fn generate_common(
     enum_ty: &Ident,
     variants_rs: &[proc_macro2::TokenStream],
-    variants_db: &[LitByteStr],
+    variants_db: &[String],
+    variants_db_bytes: &[LitByteStr],
 ) -> proc_macro2::TokenStream {
     quote! {
-        fn db_binary_representation(e: &#enum_ty) -> &'static [u8] {
+        fn db_str_representation(e: &#enum_ty) -> &'static str {
             match *e {
                 #(#variants_rs => #variants_db,)*
             }
@@ -235,7 +236,7 @@ fn generate_common(
 
         fn from_db_binary_representation(bytes: &[u8]) -> deserialize::Result<#enum_ty> {
             match bytes {
-                #(#variants_db => Ok(#variants_rs),)*
+                #(#variants_db_bytes => Ok(#variants_rs),)*
                 v => Err(format!("Unrecognized enum variant: '{}'",
                     String::from_utf8_lossy(v)).into()),
             }
@@ -346,7 +347,7 @@ fn generate_postgres_impl(
             impl ToSql<#diesel_mapping, Pg> for #enum_ty
             {
                 fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> serialize::Result {
-                    out.write_all(db_binary_representation(self))?;
+                    out.write_all(db_str_representation(self).as_bytes())?;
                     Ok(IsNull::No)
                 }
             }
@@ -378,7 +379,7 @@ fn generate_mysql_impl(diesel_mapping: &Ident, enum_ty: &Ident) -> proc_macro2::
             impl ToSql<#diesel_mapping, Mysql> for #enum_ty
             {
                 fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Mysql>) -> serialize::Result {
-                    out.write_all(db_binary_representation(self))?;
+                    out.write_all(db_str_representation(self).as_bytes())?;
                     Ok(IsNull::No)
                 }
             }
@@ -411,7 +412,7 @@ fn generate_sqlite_impl(diesel_mapping: &Ident, enum_ty: &Ident) -> proc_macro2:
 
             impl ToSql<#diesel_mapping, Sqlite> for #enum_ty {
                 fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Sqlite>) -> serialize::Result {
-                    <[u8] as ToSql<sql_types::Binary, Sqlite>>::to_sql(db_binary_representation(self), out)
+                    <str as ToSql<sql_types::Text, Sqlite>>::to_sql(db_str_representation(self), out)
                 }
             }
 
