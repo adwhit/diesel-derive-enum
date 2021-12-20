@@ -2,7 +2,7 @@
 
 extern crate proc_macro;
 
-use heck::{CamelCase, KebabCase, MixedCase, ShoutySnakeCase, SnakeCase};
+use heck::{ToKebabCase, ToLowerCamelCase, ToShoutySnakeCase, ToSnakeCase, ToUpperCamelCase};
 use proc_macro::TokenStream;
 use proc_macro2::{Ident, Span};
 use quote::quote;
@@ -153,9 +153,9 @@ fn generate_derive_enum_impls(
 
 fn stylize_value(value: &str, style: CaseStyle) -> String {
     match style {
-        CaseStyle::Camel => value.to_mixed_case(),
+        CaseStyle::Camel => value.to_lower_camel_case(),
         CaseStyle::Kebab => value.to_kebab_case(),
-        CaseStyle::Pascal => value.to_camel_case(),
+        CaseStyle::Pascal => value.to_upper_camel_case(),
         CaseStyle::ScreamingSnake => value.to_shouty_snake_case(),
         CaseStyle::Snake => value.to_snake_case(),
         CaseStyle::Verbatim => value.to_string(),
