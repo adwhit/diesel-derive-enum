@@ -137,15 +137,12 @@ fn generate_derive_enum_impls(
     let variants_rs: &[proc_macro2::TokenStream] = &variant_ids;
     let variants_db: &[LitByteStr] = &variants_db;
 
+    let common = generate_common(enum_ty, variants_rs, variants_db);
     let (common_diesel_mapping, common_diesel_mapping_use) =
         if cfg!(feature = "mysql") || cfg!(feature = "sqlite") {
             let new_diesel_mapping_impl = generate_common_diesel_mapping(new_diesel_mapping);
-            let common_impls_on_new_diesel_mapping = generate_common_impls(
-                &quote! { #new_diesel_mapping },
-                enum_ty,
-                variants_rs,
-                variants_db,
-            );
+            let common_impls_on_new_diesel_mapping =
+                generate_common_impls(&quote! { #new_diesel_mapping }, enum_ty);
             (
                 quote! {
                     #new_diesel_mapping_impl
@@ -161,9 +158,8 @@ fn generate_derive_enum_impls(
 
     let pg_impl = if cfg!(feature = "postgres") {
         let common_impls_on_existing_diesel_mapping =
-            generate_common_impls(diesel_existing_mapping, enum_ty, variants_rs, variants_db);
-        let postgres_impl =
-            generate_postgres_impl(diesel_existing_mapping, enum_ty, variants_rs, variants_db);
+            generate_common_impls(diesel_existing_mapping, enum_ty);
+        let postgres_impl = generate_postgres_impl(diesel_existing_mapping, enum_ty);
         quote! {
             #common_impls_on_existing_diesel_mapping
             #postgres_impl
@@ -172,12 +168,12 @@ fn generate_derive_enum_impls(
         quote! {}
     };
     let mysql_impl = if cfg!(feature = "mysql") {
-        generate_mysql_impl(new_diesel_mapping, enum_ty, variants_rs, variants_db)
+        generate_mysql_impl(new_diesel_mapping, enum_ty)
     } else {
         quote! {}
     };
     let sqlite_impl = if cfg!(feature = "sqlite") {
-        generate_sqlite_impl(new_diesel_mapping, enum_ty, variants_rs, variants_db)
+        generate_sqlite_impl(new_diesel_mapping, enum_ty)
     } else {
         quote! {}
     };
@@ -203,6 +199,7 @@ fn generate_derive_enum_impls(
         mod #modname {
             #imports
 
+            #common
             #common_diesel_mapping
             #pg_impl
             #mysql_impl
@@ -224,6 +221,28 @@ fn stylize_value(value: &str, style: CaseStyle) -> String {
     }
 }
 
+fn generate_common(
+    enum_ty: &Ident,
+    variants_rs: &[proc_macro2::TokenStream],
+    variants_db: &[LitByteStr],
+) -> proc_macro2::TokenStream {
+    quote! {
+        fn db_binary_representation(e: &#enum_ty) -> &'static [u8] {
+            match *e {
+                #(#variants_rs => #variants_db,)*
+            }
+        }
+
+        fn from_db_binary_representation(bytes: &[u8]) -> deserialize::Result<#enum_ty> {
+            match bytes {
+                #(#variants_db => Ok(#variants_rs),)*
+                v => Err(format!("Unrecognized enum variant: '{}'",
+                    String::from_utf8_lossy(v)).into()),
+            }
+        }
+    }
+}
+
 fn generate_common_diesel_mapping(new_diesel_mapping: &Ident) -> proc_macro2::TokenStream {
     quote! {
         #[derive(SqlType, Clone)]
@@ -236,8 +255,6 @@ fn generate_common_diesel_mapping(new_diesel_mapping: &Ident) -> proc_macro2::To
 fn generate_common_impls(
     diesel_mapping: &proc_macro2::TokenStream,
     enum_ty: &Ident,
-    variants_rs: &[proc_macro2::TokenStream],
-    variants_db: &[LitByteStr],
 ) -> proc_macro2::TokenStream {
     quote! {
         impl QueryId for #diesel_mapping {
@@ -293,18 +310,6 @@ fn generate_common_impls(
             }
         }
 
-        impl<DB: Backend> ToSql<#diesel_mapping, DB> for #enum_ty
-        where
-            DB: Backend<BindCollector = RawBytesBindCollector<DB>>,
-        {
-            fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, DB>) -> serialize::Result {
-                out.write_all(match *self {
-                    #(#variants_rs => #variants_db,)*
-                })?;
-                Ok(IsNull::No)
-            }
-        }
-
         impl<DB> ToSql<Nullable<#diesel_mapping>, DB> for #enum_ty
         where
             DB: Backend,
@@ -320,8 +325,6 @@ fn generate_common_impls(
 fn generate_postgres_impl(
     diesel_mapping: &proc_macro2::TokenStream,
     enum_ty: &Ident,
-    variants_rs: &[proc_macro2::TokenStream],
-    variants_db: &[LitByteStr],
 ) -> proc_macro2::TokenStream {
     quote! {
         mod pg_impl {
@@ -336,11 +339,15 @@ fn generate_postgres_impl(
 
             impl FromSql<#diesel_mapping, Pg> for #enum_ty {
                 fn from_sql(raw: PgValue) -> deserialize::Result<Self> {
-                    match raw.as_bytes() {
-                        #(#variants_db => Ok(#variants_rs),)*
-                        v => Err(format!("Unrecognized enum variant: '{}'",
-                                               String::from_utf8_lossy(v)).into()),
-                    }
+                    from_db_binary_representation(raw.as_bytes())
+                }
+            }
+
+            impl ToSql<#diesel_mapping, Pg> for #enum_ty
+            {
+                fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> serialize::Result {
+                    out.write_all(db_binary_representation(self))?;
+                    Ok(IsNull::No)
                 }
             }
 
@@ -355,12 +362,7 @@ fn generate_postgres_impl(
     }
 }
 
-fn generate_mysql_impl(
-    diesel_mapping: &Ident,
-    enum_ty: &Ident,
-    variants_rs: &[proc_macro2::TokenStream],
-    variants_db: &[LitByteStr],
-) -> proc_macro2::TokenStream {
+fn generate_mysql_impl(diesel_mapping: &Ident, enum_ty: &Ident) -> proc_macro2::TokenStream {
     quote! {
         mod mysql_impl {
             use super::*;
@@ -369,11 +371,15 @@ fn generate_mysql_impl(
 
             impl FromSql<#diesel_mapping, Mysql> for #enum_ty {
                 fn from_sql(raw: MysqlValue) -> deserialize::Result<Self> {
-                    match raw.as_bytes() {
-                        #(#variants_db => Ok(#variants_rs),)*
-                        v => Err(format!("Unrecognized enum variant: '{}'",
-                                               String::from_utf8_lossy(v)).into()),
-                    }
+                    from_db_binary_representation(raw.as_bytes())
+                }
+            }
+
+            impl ToSql<#diesel_mapping, Mysql> for #enum_ty
+            {
+                fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Mysql>) -> serialize::Result {
+                    out.write_all(db_binary_representation(self))?;
+                    Ok(IsNull::No)
                 }
             }
 
@@ -388,12 +394,7 @@ fn generate_mysql_impl(
     }
 }
 
-fn generate_sqlite_impl(
-    diesel_mapping: &Ident,
-    enum_ty: &Ident,
-    variants_rs: &[proc_macro2::TokenStream],
-    variants_db: &[LitByteStr],
-) -> proc_macro2::TokenStream {
+fn generate_sqlite_impl(diesel_mapping: &Ident, enum_ty: &Ident) -> proc_macro2::TokenStream {
     quote! {
         mod sqlite_impl {
             use super::*;
@@ -404,19 +405,13 @@ fn generate_sqlite_impl(
             impl FromSql<#diesel_mapping, Sqlite> for #enum_ty {
                 fn from_sql(value: backend::RawValue<Sqlite>) -> deserialize::Result<Self> {
                     let bytes = <Vec<u8> as FromSql<sql_types::Binary, Sqlite>>::from_sql(value)?;
-                    match bytes.as_slice() {
-                        #(#variants_db => Ok(#variants_rs),)*
-                        blob => Err(format!("Unexpected variant: {}", String::from_utf8_lossy(blob)).into()),
-                    }
+                    from_db_binary_representation(bytes.as_slice())
                 }
             }
 
             impl ToSql<#diesel_mapping, Sqlite> for #enum_ty {
                 fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Sqlite>) -> serialize::Result {
-                    out.set_borrowed_string(match *self {
-                        #(#variants_rs => #variants_db,)*
-                    });
-                    Ok(IsNull::No)
+                    <[u8] as ToSql<sql_types::Binary, Sqlite>>::to_sql(db_binary_representation(self), out)
                 }
             }
 
