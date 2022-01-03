@@ -9,7 +9,9 @@ extern crate diesel;
 mod common;
 mod complex_join;
 mod nullable;
-mod pg_array;
 mod rename;
 mod simple;
 mod value_style;
+
+#[cfg(feature = "postgres")]
+mod pg_array;

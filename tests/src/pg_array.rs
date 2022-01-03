@@ -3,7 +3,6 @@ use diesel::prelude::*;
 
 use crate::common::*;
 
-#[cfg(feature = "postgres")]
 pub fn create_table(conn: &PgConnection) {
     use diesel::connection::SimpleConnection;
     conn.batch_execute(
@@ -19,7 +18,6 @@ pub fn create_table(conn: &PgConnection) {
 }
 
 #[test]
-#[cfg(feature = "postgres")]
 fn enum_query() {
     let connection = get_connection();
     create_table(&connection);
