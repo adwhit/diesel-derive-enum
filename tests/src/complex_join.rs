@@ -9,7 +9,7 @@ table! {
 }
 
 #[derive(diesel::sql_types::SqlType)]
-#[postgres(type_name = "server_status")]
+#[diesel(postgres_type(name = "server_status"))]
 pub struct Server_status_pg;
 #[cfg(feature = "postgres")]
 table! {
@@ -44,14 +44,14 @@ enum ServerStatus {
 }
 
 #[derive(Insertable, Identifiable, Queryable, PartialEq, Debug)]
-#[table_name = "users"]
+#[diesel(table_name = users)]
 struct User {
     id: i32,
 }
 
 #[derive(Insertable, Queryable, Associations, PartialEq, Debug)]
-#[belongs_to(User)]
-#[table_name = "servers"]
+#[diesel(belongs_to(User))]
+#[diesel(table_name = servers)]
 struct Server {
     id: i32,
     user_id: i32,

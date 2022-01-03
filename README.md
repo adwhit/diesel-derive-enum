@@ -38,7 +38,7 @@ table! {
 
 // define a struct with which to populate/query the table
 #[derive(Insertable, Queryable, Identifiable, Debug, PartialEq)]
-#[table_name = "my_table"]
+#[diesel(table_name = my_table)]
 struct  MyRow {
     id: i32,
     some_enum: MyEnum,

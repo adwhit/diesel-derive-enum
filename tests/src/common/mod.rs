@@ -11,7 +11,7 @@ pub enum MyEnum {
 }
 
 #[derive(diesel::sql_types::SqlType)]
-#[postgres(type_name = "my_enum")]
+#[diesel(postgres_type(name = "my_enum"))]
 pub struct MyEnumPgMapping;
 #[cfg(feature = "postgres")]
 table! {
@@ -34,7 +34,7 @@ table! {
 }
 
 #[derive(Insertable, Queryable, Identifiable, Debug, Clone, PartialEq)]
-#[table_name = "test_simple"]
+#[diesel(table_name = test_simple)]
 pub struct Simple {
     pub id: i32,
     pub my_enum: MyEnum,
