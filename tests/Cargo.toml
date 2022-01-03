@@ -5,13 +5,13 @@ authors = ["Alex Whitney <adwhit@fastmail.com>"]
 edition = "2018"
 
 [dependencies]
-diesel = { version = "2.0.0", features = ["sqlite", "postgres", "mysql"] }
-diesel-derive-enum = { path = "./..", features = ["sqlite", "postgres", "mysql"] }
+diesel = { version = "2.0.0" }
+diesel-derive-enum = { path = "./.." }
 
 [features]
-postgres = []
-sqlite = []
-mysql = []
+postgres = [ "diesel/postgres", "diesel-derive-enum/postgres"]
+sqlite = [ "diesel/sqlite", "diesel-derive-enum/sqlite"]
+mysql = [ "diesel/mysql", "diesel-derive-enum/mysql"]
 
 [patch.crates-io]
 diesel = { git = 'https://github.com/diesel-rs/diesel' }

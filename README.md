@@ -4,16 +4,16 @@
 
 Use Rust enums directly with [`diesel`](https://github.com/diesel-rs/diesel) ORM.
 
-The latest release, `1.1.1`, is tested against `diesel 1.4` and `rustc 1.39.0`. It _may_ work with older versions.
+The latest release, `1.1.1`, is tested against `diesel 1.4` and `rustc 1.39.0`.
 
-*Note:* The current master branch tracks `diesel` master, and will **not** work with `diesel 1.x`.
+*Note:* The master branch of this repository tracks `diesel` master, and will **not** work with `diesel 1.x`. In addition, the API has changed somewhat - if you are using `diesel 1.x` please refer to the [README in the diesel-1 branch](https://github.com/adwhit/diesel-derive-enum/blob/diesel-1/README.md). What follows will _only work for `diesel` master_.
 
 ### Example usage:
 
 #### Cargo.toml
 ```toml
 [dependencies]
-diesel-derive-enum = { version = "1", features = ["..."] } # "postgres", "mysql" or "sqlite"
+diesel-derive-enum = { git = "https://github.com/adwhit/diesel-derive-enum", features = ["..."] } # "postgres", "mysql" or "sqlite"
 ```
 
 #### Rust
