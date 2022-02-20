@@ -236,7 +236,7 @@ attribute.  Individual variants can still be renamed using `#[db_rename = "..."]
 | kebab-case | BazQuxx | "baz-quxx" |
 | PascalCase | BazQuxx | "BazQuxx" |
 | SCREAMING_SNAKE_CASE | BazQuxx | "BAZ_QUXX" |
-| SCREAMINGCONCAT | BazQuxx | "BAZQUXX" |
+| UPPERCASE | BazQuxx | "BAZQUXX" |
 | snake_case | BazQuxx | "baz_quxx" |
 | verbatim | Baz__quxx | "Baz__quxx" |
 
