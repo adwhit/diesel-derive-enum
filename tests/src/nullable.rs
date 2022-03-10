@@ -68,7 +68,8 @@ pub fn create_null_table(conn: &mut MysqlConnection) {
 
 #[cfg(feature = "sqlite")]
 pub fn create_null_table(conn: &mut SqliteConnection) {
-    conn.execute(
+    use diesel::connection::SimpleConnection;
+    conn.batch_execute(
         r#"
         CREATE TABLE test_nullable (
             id SERIAL PRIMARY KEY,

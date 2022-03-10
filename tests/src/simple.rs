@@ -53,10 +53,11 @@ fn filter_by_enum() {
 #[test]
 #[cfg(feature = "sqlite")]
 fn sqlite_invalid_enum() {
+    use diesel::connection::SimpleConnection;
     let connection = &mut get_connection();
     let data = sample_data();
     connection
-        .execute(
+        .batch_execute(
             r#"
         CREATE TABLE test_simple (
             id SERIAL PRIMARY KEY,

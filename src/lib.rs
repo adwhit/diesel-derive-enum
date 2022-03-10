@@ -183,7 +183,8 @@ fn generate_derive_enum_impls(
         use diesel::{
             backend::{self, Backend},
             deserialize::{self, FromSql},
-            expression::{bound::Bound, AsExpression},
+            expression::AsExpression,
+            internal::derives::as_expression::Bound,
             query_builder::{bind_collector::RawBytesBindCollector, QueryId},
             row::Row,
             serialize::{self, IsNull, Output, ToSql},
