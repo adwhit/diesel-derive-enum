@@ -3,7 +3,7 @@ use diesel::prelude::*;
 use diesel_derive_enum::DbEnum;
 
 #[derive(Debug, PartialEq, DbEnum, Clone)]
-#[cfg_attr(feature = "postgres", DieselTypePath = "Stylized_Internal_Type_Pg")]
+#[cfg_attr(feature = "postgres", DieselTypePath = "MyEnumPgMapping")]
 pub enum MyEnum {
     Foo,
     Bar,
