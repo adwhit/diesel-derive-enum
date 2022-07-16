@@ -8,39 +8,57 @@ use proc_macro2::{Ident, Span};
 use quote::quote;
 use syn::*;
 
-/// Implement necessary traits for adding a database enum as a new sql type.
+/// Implement the traits necessary for inserting the enum directly into a database
 ///
 /// # Attributes
 ///
 /// ## Type attributes
 ///
-/// * `#[DieselExistingType = "crate::schema::sql_types::NewEnum"]` specifies the name for the corresponding diesel type that was already created by the diesel CLI. If omitted, uses `crate::schema::sql_types::EnumName`.
-/// * `#[DieselType = "NewEnumMapping"]` specifies the name for the diesel type to create for Mysql or Sqlite. If omitted, uses the name + `Mapping`.
-/// * `#[DbValueStyle = "snake_case"]` specifies a renaming style from each of the rust enum variants to each of the database variants. Either `camelCase`, `kebab-case`, `PascalCase`, `SCREAMING_SNAKE_CASE`, `snake_case`, `verbatim`. If omitted, uses `snake_case`.
+/// * `#[DieselTypePath = "crate::schema::sql_types::NewEnum"]` specifies
+///   the name for the corresponding diesel type that was already created by the
+///   diesel CLI. If omitted, uses `crate::schema::sql_types::EnumName`.
+///   *Note*: Only applies to `postgres`, will error if specified for other databases
+/// * `#[DieselType = "NewEnumMapping"]` specifies the name for the diesel type
+///   to create. If omitted, uses the name + `Mapping`.
+///   *Note*: Does *not* apply to `postgres` and will error if specified
+/// * `#[DbValueStyle = "snake_case"]` specifies a renaming style from each of
+///   the rust enum variants to each of the database variants. Either `camelCase`,
+///   `kebab-case`, `PascalCase`, `SCREAMING_SNAKE_CASE`, `snake_case`,
+///   `verbatim`. If omitted, uses `snake_case`.
 ///
 /// ## Variant attributes
 ///
 /// * `#[db_rename = "variant"]` specifies the db name for a specific variant.
 #[proc_macro_derive(
     DbEnum,
-    attributes(DieselType, DieselExistingType, DbValueStyle, db_rename)
+    attributes(DieselType, DieselTypePath, DbValueStyle, db_rename)
 )]
 pub fn derive(input: TokenStream) -> TokenStream {
     let input: DeriveInput = parse_macro_input!(input as DeriveInput);
-    let diesel_existing_mapping = type_from_attrs(&input.attrs, "DieselExistingType")
-        .unwrap_or(format!("crate::schema::sql_types::{}", input.ident));
+
+    let diesel_existing_mapping = type_from_attrs(&input.attrs, "DieselTypePath");
+    if !cfg!(feature = "postgres") && diesel_existing_mapping.is_some() {
+        panic!("DieselTypePath attribute only applies when the 'postgres' feature is enabled");
+    }
+    let diesel_existing_mapping = diesel_existing_mapping
+        .unwrap_or_else(|| format!("crate::schema::sql_types::{}", input.ident));
+
+    let new_diesel_mapping = type_from_attrs(&input.attrs, "DieselType");
+    if !(cfg!(feature = "mysql") || cfg!(feature = "sqlite")) && new_diesel_mapping.is_some() {
+        panic!("DieselType attribute only applies when the 'mysql' or 'sqlite' feature is enabled");
+    }
     let new_diesel_mapping =
-        type_from_attrs(&input.attrs, "DieselType").unwrap_or(format!("{}Mapping", input.ident));
+        new_diesel_mapping.unwrap_or_else(|| format!("{}Mapping", input.ident));
 
     // Maintain backwards compatibility by defaulting to snake case.
     let case_style =
-        type_from_attrs(&input.attrs, "DbValueStyle").unwrap_or("snake_case".to_string());
+        type_from_attrs(&input.attrs, "DbValueStyle").unwrap_or_else(|| "snake_case".to_string());
     let case_style = CaseStyle::from_string(&case_style);
 
     let diesel_existing_mapping: proc_macro2::TokenStream =
         diesel_existing_mapping.parse().unwrap();
     let new_diesel_mapping = Ident::new(new_diesel_mapping.as_ref(), Span::call_site());
-    let quoted = if let Data::Enum(syn::DataEnum {
+    if let Data::Enum(syn::DataEnum {
         variants: data_variants,
         ..
     }) = input.data
@@ -53,14 +71,13 @@ pub fn derive(input: TokenStream) -> TokenStream {
             &data_variants,
         )
     } else {
-        return syn::Error::new(
+        syn::Error::new(
             Span::call_site(),
             "derive(DbEnum) can only be applied to enums",
         )
         .to_compile_error()
-        .into();
-    };
-    quoted.into()
+        .into()
+    }
 }
 
 fn type_from_attrs(attrs: &[Attribute], attrname: &str) -> Option<String> {
@@ -129,7 +146,7 @@ fn generate_derive_enum_impls(
         .iter()
         .map(|variant| {
             type_from_attrs(&variant.attrs, "db_rename")
-                .unwrap_or(stylize_value(&variant.ident.to_string(), case_style))
+                .unwrap_or_else(|| stylize_value(&variant.ident.to_string(), case_style))
         })
         .collect();
     let variants_db_bytes: Vec<LitByteStr> = variants_db
@@ -138,44 +155,44 @@ fn generate_derive_enum_impls(
         .collect();
 
     let common = generate_common(enum_ty, &variant_ids, &variants_db, &variants_db_bytes);
-    let (common_diesel_mapping, common_diesel_mapping_use) =
+    let (diesel_mapping_def, diesel_mapping_use) =
         if cfg!(feature = "mysql") || cfg!(feature = "sqlite") {
-            let new_diesel_mapping_impl = generate_common_diesel_mapping(new_diesel_mapping);
+            let new_diesel_mapping_def = generate_new_diesel_mapping(new_diesel_mapping);
             let common_impls_on_new_diesel_mapping =
                 generate_common_impls(&quote! { #new_diesel_mapping }, enum_ty);
             (
-                quote! {
-                    #new_diesel_mapping_impl
+                Some(quote! {
+                    #new_diesel_mapping_def
                     #common_impls_on_new_diesel_mapping
-                },
-                quote! {
+                }),
+                Some(quote! {
                     pub use self::#modname::#new_diesel_mapping;
-                },
+                }),
             )
         } else {
-            (quote! {}, quote! {})
+            (None, None)
         };
 
     let pg_impl = if cfg!(feature = "postgres") {
         let common_impls_on_existing_diesel_mapping =
             generate_common_impls(diesel_existing_mapping, enum_ty);
         let postgres_impl = generate_postgres_impl(diesel_existing_mapping, enum_ty);
-        quote! {
+        Some(quote! {
             #common_impls_on_existing_diesel_mapping
             #postgres_impl
-        }
+        })
     } else {
-        quote! {}
+        None
     };
     let mysql_impl = if cfg!(feature = "mysql") {
-        generate_mysql_impl(new_diesel_mapping, enum_ty)
+        Some(generate_mysql_impl(new_diesel_mapping, enum_ty))
     } else {
-        quote! {}
+        None
     };
     let sqlite_impl = if cfg!(feature = "sqlite") {
-        generate_sqlite_impl(new_diesel_mapping, enum_ty)
+        Some(generate_sqlite_impl(new_diesel_mapping, enum_ty))
     } else {
-        quote! {}
+        None
     };
 
     let imports = quote! {
@@ -195,13 +212,13 @@ fn generate_derive_enum_impls(
     };
 
     let quoted = quote! {
-        #common_diesel_mapping_use
+        #diesel_mapping_use
         #[allow(non_snake_case)]
         mod #modname {
             #imports
 
             #common
-            #common_diesel_mapping
+            #diesel_mapping_def
             #pg_impl
             #mysql_impl
             #sqlite_impl
@@ -245,7 +262,9 @@ fn generate_common(
     }
 }
 
-fn generate_common_diesel_mapping(new_diesel_mapping: &Ident) -> proc_macro2::TokenStream {
+fn generate_new_diesel_mapping(new_diesel_mapping: &Ident) -> proc_macro2::TokenStream {
+    // Note - we only generate a new mapping for mysql and sqlite, postgres
+    // should already have one
     quote! {
         #[derive(SqlType, Clone)]
         #[diesel(mysql_type(name = "Enum"))]
