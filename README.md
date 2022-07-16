@@ -209,21 +209,20 @@ Diesel maintains a set of internal types which correspond one-to-one to the type
 relational databases. Each internal type in turn maps to some kind of Rust native type.
 e.g. Postgres `INTEGER` maps to `diesel::types::Integer` maps to `i32`.
 
-*For postgres only*, as of `diesel-2.0.0-rc.0`, diesel will create the 'dummy' internal enum type as part
+*For `postgres` only*, as of `diesel-2.0.0-rc.0`, diesel will create the 'dummy' internal enum type as part
 of the schema generation process. This crate will attempt to locate this dummy type at the
-the path `crate::schema::sql_types::{enum_name}`. This location can be overridden with the
+the default path of `crate::schema::sql_types::{enum_name}`. This location can be overridden with the
 `DieselTypePath` attribute.
 
-For mysql and sqlite, the intenal type is *not** automatically generated, so this macro will instead create it
-with the name `{enum_name}Mapping`. This name can be overridden with the `DieselType` attribute.
+For `mysql` and `sqlite`, the intenal type is *not* automatically generated, so this macro will instead create it
+with the default name `{enum_name}Mapping`. This name can be overridden with the `DieselType` attribute.
 
 In either case, this macro will then implement various traits on the internal type.
 This macro will also implement various traits on the user-defined `enum` type.
-
 The net result of this is that the user-defined enum can be directly inserted into (and retrieved
 from) the diesel database.
 
-Note that by default we assume that the possible ENUM variants are simply the Rust enum variants
+Note that by default we assume that the possible SQL ENUM variants are simply the Rust enum variants
 translated to `snake_case`.  These can be renamed with the inline annotation `#[db_rename = "..."]`.
 
 See [this test](tests/src/rename.rs) for an example of renaming.
