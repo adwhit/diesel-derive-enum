@@ -235,7 +235,7 @@ fn stylize_value(value: &str, style: CaseStyle) -> String {
         CaseStyle::Camel => value.to_lower_camel_case(),
         CaseStyle::Kebab => value.to_kebab_case(),
         CaseStyle::Pascal => value.to_upper_camel_case(),
-        CaseStyle::Upper => value.to_shouty_snake_case().replace("_", ""),
+        CaseStyle::Upper => value.to_uppercase(),
         CaseStyle::ScreamingSnake => value.to_shouty_snake_case(),
         CaseStyle::Snake => value.to_snake_case(),
         CaseStyle::Verbatim => value.to_string(),
