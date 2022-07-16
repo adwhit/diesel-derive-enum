@@ -3,16 +3,18 @@ use diesel::prelude::*;
 use diesel_derive_enum::DbEnum;
 
 #[derive(Debug, PartialEq, DbEnum, Clone)]
-#[DieselExistingType = "MyEnumPgMapping"]
+#[cfg_attr(feature = "postgres", DieselTypePath = "MyEnumPgMapping")]
 pub enum MyEnum {
     Foo,
     Bar,
     BazQuxx,
 }
 
+#[cfg(feature = "postgres")]
 #[derive(diesel::sql_types::SqlType)]
 #[diesel(postgres_type(name = "my_enum"))]
 pub struct MyEnumPgMapping;
+
 #[cfg(feature = "postgres")]
 table! {
     use diesel::sql_types::Integer;
@@ -23,7 +25,7 @@ table! {
     }
 }
 
-#[cfg(not(feature = "postgres"))]
+#[cfg(any(feature = "mysql", feature = "sqlite"))]
 table! {
     use diesel::sql_types::Integer;
     use super::MyEnumMapping;

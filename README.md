@@ -4,24 +4,99 @@
 
 Use Rust enums directly with [`diesel`](https://github.com/diesel-rs/diesel) ORM.
 
-The latest release, `1.1.2`, is tested against `diesel 1.4` and `rustc 1.39.0`.
+The latest release, `2.0.0-rc.0`, is tested against `diesel 2.0.0-rc.0` and `rustc 1.51.0`.
 
-*Note:* The master branch of this repository tracks `diesel` master, and will **not** work with `diesel 1.x`. In addition, the API has changed somewhat - if you are using `diesel 1.x` please refer to the [README in the diesel-1 branch](https://github.com/adwhit/diesel-derive-enum/blob/diesel-1/README.md). What follows will _only work for `diesel` master_.
+*Note:* The master branch of this repository tracks `diesel` master, and will **not** work with `diesel 1.x`.
+In addition, the API has changed somewhat - if you are using `diesel 1.x` please refer to
+the [README in the diesel-1 branch](https://github.com/adwhit/diesel-derive-enum/blob/diesel-1/README.md).
+What follows will _only work for `diesel 2.0`.
 
-### Example usage:
+## Setup
 
-#### Cargo.toml
+### Postgres
+
+Cargo.toml:
 ```toml
 [dependencies]
-diesel-derive-enum = { git = "https://github.com/adwhit/diesel-derive-enum", features = ["..."] } # "postgres", "mysql" or "sqlite"
+diesel-derive-enum = { version = "2.0.0-rc.0", features = ["postgres"] }
 ```
 
-#### Rust
+As of `diesel-2.0.0-rc`, we recommend using [diesel-cli](http://diesel.rs/guides/configuring-diesel-cli.html)
+to generate correct SQL <-> Rust bindings.
+
+Suppose your project has the following `diesel.toml`:
+
+``` toml
+[print_schema]
+file = "src/schema.rs"
+```
+
+And the following SQL:
+```sql
+CREATE TYPE my_enum AS ENUM ('foo', 'bar', 'baz_quxx');
+
+CREATE TABLE my_table (
+  id SERIAL PRIMARY KEY,
+  some_enum my_enum NOT NULL
+);
+```
+
+Then diesel-cli will generate something like the following:
+
 ```rust
-// define your enum
-#[derive(DbEnum)]
+// src/schema.rs
+
+pub mod sql_types {
+    #[derive(diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "my_enum"))]
+    pub struct MyEnum;
+}
+
+table! {
+    use diesel::types::Integer;
+    use super::sql_types::MyEnum;
+
+    my_table {
+        id -> Integer,
+        some_enum -> MyEnum
+    }
+}
+```
+Now we can use `diesel-derive-enum` to hook in our own enum:
+
+```rust
+// src/my_code.rs
+
+#[derive(diesel_derive_enum::DbEnum)]
+#[DieselTypePath = "crate::schema::sql_types::MyEnum"]
 pub enum MyEnum {
-    Foo,  // All variants must be fieldless
+    Foo,
+    Bar,
+    BazQuxx,
+}
+```
+
+### MySQL
+
+Cargo.toml:
+```toml
+[dependencies]
+diesel-derive-enum = { version = "2.0.0-rc.0", features = ["mysql"] }
+```
+
+SQL:
+```sql
+CREATE TABLE my_table (
+    id SERIAL PRIMARY KEY,
+    my_enum enum('foo', 'bar', 'baz_quxx') NOT NULL  -- note: snake_case
+);
+```
+
+Rust:
+```rust
+#[derive(diesel_derive_enum::DbEnum)]
+pub enum MyEnum {
+    Foo,
     Bar,
     BazQuxx,
 }
@@ -35,8 +110,51 @@ table! {
         some_enum -> MyEnumMapping, // Generated Diesel type - see below for explanation
     }
 }
+```
 
-// define a struct with which to populate/query the table
+### sqlite
+
+
+Cargo.toml:
+```toml
+[dependencies]
+diesel-derive-enum = { version = "2.0.0-rc.0", features = ["sqlite"] }
+```
+
+SQL:
+```sql
+CREATE TABLE my_table (
+    id SERIAL PRIMARY KEY,
+    my_enum TEXT CHECK(my_enum IN ('foo', 'bar', 'baz_quxx')) NOT NULL   -- note: snake_case
+);
+```
+
+Rust:
+``` rust
+#[derive(diesel_derive_enum::DbEnum)]
+pub enum MyEnum {
+    Foo,
+    Bar,
+    BazQuxx,
+}
+
+// define your table
+table! {
+    use diesel::types::Integer;
+    use super::MyEnumMapping;
+    my_table {
+        id -> Integer,
+        some_enum -> MyEnumMapping, // Generated Diesel type - see below for explanation
+    }
+}
+```
+
+## Usage
+
+Usage is similar regardless of your chosen database.
+We can define a struct with which to populate/query the table:
+
+``` rust
 #[derive(Insertable, Queryable, Identifiable, Debug, PartialEq)]
 #[diesel(table_name = my_table)]
 struct  MyRow {
@@ -45,34 +163,7 @@ struct  MyRow {
 }
 ```
 
-#### SQL
-
-Postgres:
-```sql
--- by default the postgres ENUM values correspond to snake_cased Rust enum variant names
-CREATE TYPE my_enum AS ENUM ('foo', 'bar', 'baz_quxx');
-
-CREATE TABLE my_table (
-  id SERIAL PRIMARY KEY,
-  some_enum my_enum NOT NULL
-);
-```
-MySQL:
-```sql
-CREATE TABLE my_table (
-    id SERIAL PRIMARY KEY,
-    my_enum enum('foo', 'bar', 'baz_quxx') NOT NULL  -- note: snake_case
-);
-```
-sqlite:
-```sql
-CREATE TABLE my_table (
-    id SERIAL PRIMARY KEY,
-    my_enum TEXT CHECK(my_enum IN ('foo', 'bar', 'baz_quxx')) NOT NULL   -- note: snake_case
-);
-```
-
-Now we can insert and retrieve MyEnum directly:
+And use it in the natural way:
 
 ```rust
 let data = vec![
@@ -92,46 +183,52 @@ let inserted = insert_into(my_table::table)
     .unwrap();
 assert_eq!(data, inserted);
 ```
-
 Postgres arrays work too! See [this example.](tests/src/pg_array.rs)
 
-### Enums Explained
+### Enums Representations
 
-Enums work slightly differently in each of the three databases.
-* In Postgres, one declares an enum as a separate type within a schema, which may then
-  be used in multiple tables. Internally, an enum value is encoded as an int (four bytes)
-  and stored inline within a row - a much more efficient representation than a string.
+Enums are not part of the SQL standard and have database-specific implementations.
+
+* In Postgres, we declare an enum as a separate type within a schema (`CREATE TYPE ...`),
+  which may then be used in multiple tables. Internally, an enum value is encoded as an int (four bytes)
+  and stored inline within a row (a much more efficient representation than a string).
+
 * MySQL is similar except the enum is not declared as a separate type and is 'local' to
   it's parent table. It is encoded as either one or two bytes.
-* sqlite does not have enums - in fact, it does [not really have types](https://dba.stackexchange.com/questions/106364/text-string-stored-in-sqlite-integer-column);
+
+* sqlite does not have enums - in fact, it does
+  [not really have types](https://dba.stackexchange.com/questions/106364/text-string-stored-in-sqlite-integer-column);
   you can store any kind of data in any column. Instead we emulate static checking by
   adding the `CHECK` command, as per above. This does not give a more compact encoding
-  but does ensure data integrity. Note that if you somehow retreive some other invalid
+  but does ensure better data integrity. Note that if you somehow retreive some other invalid
   text as an enum, `diesel` will error at the point of deserialization.
 
-### Type Names
+### How It Works
 
 Diesel maintains a set of internal types which correspond one-to-one to the types available in various
 relational databases. Each internal type in turn maps to some kind of Rust native type.
-e.g. Postgres `INTEGER` maps to `diesel::types::Integer` maps to `i32`. Therefore when we create a new enum in Postgres
-with `CREATE TYPE ...`, we must also create a corresponding type in Diesel, then map it to
-some native Rust type (our enum). That is the purpose of this crate.
+e.g. Postgres `INTEGER` maps to `diesel::types::Integer` maps to `i32`.
 
-If you are getting compilation errors, it could be that these three types names are not 'in sync'.
-By default, the database and Diesel internal types are inferred from the name of the Rust enum.
-Specifically, we assume `MyEnum` corresponds to `my_enum` in your database schema and `MyEnumMapping` in Diesel.
+*For `postgres` only*, as of `diesel-2.0.0-rc.0`, diesel will create the 'dummy' internal enum type as part
+of the schema generation process. This crate will attempt to locate this dummy type at the
+the default path of `crate::schema::sql_types::{enum_name}`. This location can be overridden with the
+`DieselTypePath` attribute.
 
-These defaults can be overridden with the attributes `#[PgType = "..."]` and `#[DieselType = "..."]`.
-(The `PgType` annotation has no effect on `MySQL` or `sqlite`).
+For `mysql` and `sqlite`, the intenal type is *not* automatically generated, so this macro will instead create it
+with the default name `{enum_name}Mapping`. This name can be overridden with the `DieselType` attribute.
 
-Similarly, by default we assume that the possible ENUM variants are simply the Rust enum variants
+In either case, this macro will then implement various traits on the internal type.
+This macro will also implement various traits on the user-defined `enum` type.
+The net result of this is that the user-defined enum can be directly inserted into (and retrieved
+from) the diesel database.
+
+Note that by default we assume that the possible SQL ENUM variants are simply the Rust enum variants
 translated to `snake_case`.  These can be renamed with the inline annotation `#[db_rename = "..."]`.
 
 See [this test](tests/src/rename.rs) for an example of renaming.
 
-See [this test](tests/src/schema.rs) for an example of specifying a schema.
-
-You can override the `snake_case` assumption for the entire enum using the `#[DbValueStyle = "..."]` attribute.  Individual variants can still be renamed using `#[db_rename = "..."]`.
+You can override the `snake_case` assumption for the entire enum using the `#[DbValueStyle = "..."]`
+attribute.  Individual variants can still be renamed using `#[db_rename = "..."]`.
 
 | DbValueStyle   | Variant | Value   |
 |:-------------------:|:---------:|:---|
@@ -139,31 +236,11 @@ You can override the `snake_case` assumption for the entire enum using the `#[Db
 | kebab-case | BazQuxx | "baz-quxx" |
 | PascalCase | BazQuxx | "BazQuxx" |
 | SCREAMING_SNAKE_CASE | BazQuxx | "BAZ_QUXX" |
+| UPPERCASE | BazQuxx | "BAZQUXX" |
 | snake_case | BazQuxx | "baz_quxx" |
 | verbatim | Baz__quxx | "Baz__quxx" |
 
 See [this test](tests/src/value_style.rs) for an example of changing the output style.
-
-#### `print-schema` and `infer-schema!`
-
-The `print-schema` command (from `diesel_cli`) attempts to connect to an existing DB and generate
-a correct mapping of Postgres columns to Diesel internal types. If a custom ENUM exists in the
-database, Diesel will simply assume that the internal mapping type is the ENUM name,
-Title-cased (e.g. `my_enum` -> `My_enum`). Therefore the derived mapping name must also
-be corrected with the `DieselType` attribute e.g. `#[DieselType = "My_enum"]`.
-
-If you are using a `diesel.toml` file to generate your `schema.rs` file, you should be sure to
-add an extra import for the enum mapping type, i.e. it should look something like the following:
-
-``` toml
-# In diesel.toml
-
-[print_schema]
-file = "src/schema.rs"
-import_types = ["diesel::sql_types::*", "crate::my_enum::*"]   # <- note the extra import
-```
-
-Unfortunately the `infer_schema!` is not compatible with this crate.
 
 ### License
 

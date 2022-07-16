@@ -81,7 +81,7 @@ fn sqlite_invalid_enum() {
 // (but we won't actually bother round-tripping)
 
 #[derive(Debug, PartialEq, diesel_derive_enum::DbEnum)]
-#[DieselExistingType = "MyEnumPgMapping"]
+#[cfg_attr(feature = "postgres", DieselTypePath = "MyEnumPgMapping")]
 pub enum my_enum {
     foo,
     bar,
