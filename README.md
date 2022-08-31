@@ -48,7 +48,7 @@ Then diesel-cli will generate something like the following:
 // src/schema.rs
 
 pub mod sql_types {
-    #[derive(diesel::sql_types::SqlType)]
+    #[derive(diesel::sql_types::SqlType, diesel::query_builder::QueryId)]
     #[diesel(postgres_type(name = "my_enum"))]
     pub struct MyEnum;
 }

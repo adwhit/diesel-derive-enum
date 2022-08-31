@@ -11,7 +11,7 @@ pub enum MyEnum {
 }
 
 #[cfg(feature = "postgres")]
-#[derive(diesel::sql_types::SqlType)]
+#[derive(diesel::sql_types::SqlType, diesel::query_builder::QueryId)]
 #[diesel(postgres_type(name = "my_enum"))]
 pub struct MyEnumPgMapping;
 
