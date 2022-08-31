@@ -8,7 +8,7 @@ table! {
     }
 }
 
-#[derive(diesel::sql_types::SqlType)]
+#[derive(diesel::sql_types::SqlType, diesel::query_builder::QueryId)]
 #[diesel(postgres_type(name = "server_status"))]
 pub struct Server_status_pg;
 

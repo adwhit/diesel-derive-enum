@@ -19,7 +19,7 @@ pub enum StylizedEnum {
     cRaZy_FiFtH,
 }
 
-#[derive(diesel::sql_types::SqlType)]
+#[derive(diesel::sql_types::SqlType, diesel::query_builder::QueryId)]
 #[diesel(postgres_type(name = "Stylized_External_Type"))]
 pub struct Stylized_Internal_Type_Pg;
 #[cfg(feature = "postgres")]

@@ -3,7 +3,7 @@ use diesel::prelude::*;
 #[cfg(any(feature = "sqlite", feature = "postgres", feature = "mysql"))]
 use crate::common::get_connection;
 
-#[derive(diesel::sql_types::SqlType)]
+#[derive(diesel::sql_types::SqlType, diesel::query_builder::QueryId)]
 #[diesel(postgres_type(name = "Some_External_Type"))]
 pub struct Some_Internal_Type_Pg;
 

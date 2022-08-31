@@ -204,7 +204,7 @@ fn generate_derive_enum_impls(
             deserialize::{self, FromSql},
             expression::AsExpression,
             internal::derives::as_expression::Bound,
-            query_builder::{bind_collector::RawBytesBindCollector, QueryId},
+            query_builder::bind_collector::RawBytesBindCollector,
             row::Row,
             serialize::{self, IsNull, Output, ToSql},
             sql_types::*,
@@ -269,7 +269,7 @@ fn generate_new_diesel_mapping(new_diesel_mapping: &Ident) -> proc_macro2::Token
     // Note - we only generate a new mapping for mysql and sqlite, postgres
     // should already have one
     quote! {
-        #[derive(SqlType, Clone)]
+        #[derive(SqlType, Clone, diesel::query_builder::QueryId)]
         #[diesel(mysql_type(name = "Enum"))]
         #[diesel(sqlite_type(name = "Text"))]
         pub struct #new_diesel_mapping;
@@ -281,11 +281,6 @@ fn generate_common_impls(
     enum_ty: &Ident,
 ) -> proc_macro2::TokenStream {
     quote! {
-        impl QueryId for #diesel_mapping {
-            type QueryId = #diesel_mapping;
-            const HAS_STATIC_QUERY_ID: bool = true;
-        }
-
         impl AsExpression<#diesel_mapping> for #enum_ty {
             type Expression = Bound<#diesel_mapping, Self>;
 
