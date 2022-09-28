@@ -30,7 +30,11 @@ Suppose your project has the following `diesel.toml`:
 ``` toml
 [print_schema]
 file = "src/schema.rs"
+custom_type_derives = ["diesel::query_builder::QueryId"]
 ```
+(NB: the `custom_type_derives` config here matters and you will otherwise get `QueryId`-related errors.
+It becomes the default for new projects in [recent Diesel CLI versions](https://github.com/diesel-rs/diesel/pull/3308),
+but if your project was created before you may want to check on this).
 
 And the following SQL:
 ```sql
