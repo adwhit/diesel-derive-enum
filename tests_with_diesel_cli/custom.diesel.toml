@@ -1,0 +1,7 @@
+[print_schema]
+file = "src/custom_schema.rs"
+generate_missing_sql_type_definitions = false
+import_types = ["diesel::sql_types::*", "crate::with_custom_schema::export::MyEnum"]
+
+[migrations_directory]
+dir = "migrations"
