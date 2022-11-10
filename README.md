@@ -4,7 +4,7 @@
 
 Use Rust enums directly with [`diesel`](https://github.com/diesel-rs/diesel) ORM.
 
-The latest release, `2.0.0-rc.0`, is tested against `diesel 2.0.0-rc.0` and `rustc 1.56.1`.
+The latest release, `2.0.0-rc.0`, is tested against `diesel 2.0.0-rc.0` and `rustc 1.57`.
 It also works with `diesel-2.0.0-rc.1`, without changes.
 
 *Note:* The master branch of this repository tracks `diesel` master, and will **not** work with `diesel 1.x`.

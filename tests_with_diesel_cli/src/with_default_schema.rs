@@ -31,7 +31,7 @@ mod tests {
 
     #[test]
     fn round_trip() {
-        let mut conn = get_connection();
+        let mut conn = crate::get_connection();
         let this = Simple {
             id: 1,
             some_value: MyEnum::Foo,
