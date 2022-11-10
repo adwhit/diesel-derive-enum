@@ -3,7 +3,7 @@ use diesel::prelude::*;
 
 #[cfg(feature = "postgres")]
 #[derive(diesel::sql_types::SqlType)]
-#[diesel(postgres_type(name = "my_remoate_enum"))]
+#[diesel(postgres_type(name = "my_remote_enum"))]
 pub struct MyRemoteEnumMapping;
 
 table! {
