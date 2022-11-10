@@ -5,6 +5,7 @@ use crate::common::get_connection;
 
 #[derive(Debug, PartialEq, diesel_derive_enum::DbEnum)]
 #[DieselType = "Stylized_Internal_Type"]
+#[PgType = "Stylized_External_Type"]
 #[DbValueStyle = "PascalCase"]
 pub enum StylizedEnum {
     FirstVariant,

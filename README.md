@@ -219,7 +219,7 @@ of the schema generation process. This crate will attempt to locate this dummy t
 the default path of `crate::schema::sql_types::{enum_name}`. This location can be overridden with the
 `ExistingTypePath` attribute.
 
-For `mysql` and `sqlite`, the intenal type is *not* automatically generated, so this macro will instead create it
+For `mysql` and `sqlite`, the internal type is *not* automatically generated, so this macro will instead create it
 with the default name `{enum_name}Mapping`. This name can be overridden with the `DieselType` attribute.
 
 In either case, this macro will then implement various traits on the internal type.

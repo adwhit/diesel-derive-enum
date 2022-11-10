@@ -30,7 +30,7 @@ mod tests {
 
     #[test]
     fn round_trip() {
-        let mut conn = Conn::establish("postgres://postgres:postgres@localhost:5432").unwrap();
+        let mut conn = crate::get_connection();
         let this = Simple {
             id: 2,
             some_value: MyEnum::BazQuxx,
