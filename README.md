@@ -73,7 +73,7 @@ Now we can use `diesel-derive-enum` to hook in our own enum:
 // src/my_code.rs
 
 #[derive(diesel_derive_enum::DbEnum)]
-#[DieselTypePath = "crate::schema::sql_types::MyEnum"]
+#[ExistingTypePath = "crate::schema::sql_types::MyEnum"]
 pub enum MyEnum {
     Foo,
     Bar,
@@ -217,7 +217,7 @@ e.g. Postgres `INTEGER` maps to `diesel::types::Integer` maps to `i32`.
 *For `postgres` only*, as of `diesel-2.0.0-rc.0`, diesel will create the 'dummy' internal enum type as part
 of the schema generation process. This crate will attempt to locate this dummy type at the
 the default path of `crate::schema::sql_types::{enum_name}`. This location can be overridden with the
-`DieselTypePath` attribute.
+`ExistingTypePath` attribute.
 
 For `mysql` and `sqlite`, the intenal type is *not* automatically generated, so this macro will instead create it
 with the default name `{enum_name}Mapping`. This name can be overridden with the `DieselType` attribute.

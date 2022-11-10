@@ -3,25 +3,6 @@ use diesel::prelude::*;
 
 use crate::common::*;
 
-#[cfg(feature = "postgres")]
-table! {
-    use diesel::sql_types::{Integer, Nullable};
-    use super::MyEnumPgMapping;
-    test_nullable {
-        id -> Integer,
-        my_enum -> Nullable<MyEnumPgMapping>,
-    }
-}
-#[cfg(not(feature = "postgres"))]
-table! {
-    use diesel::sql_types::{Integer, Nullable};
-    use super::MyEnumMapping;
-    test_nullable {
-        id -> Integer,
-        my_enum -> Nullable<MyEnumMapping>,
-    }
-}
-
 #[derive(Insertable, Queryable, Identifiable, Debug, PartialEq)]
 #[diesel(table_name = test_nullable)]
 struct Nullable {
@@ -34,6 +15,15 @@ struct Nullable {
 struct MaybeNullable {
     id: i32,
     my_enum: MyEnum,
+}
+
+table! {
+    use diesel::sql_types::{Integer, Nullable};
+    use super::MyEnumMapping;
+    test_nullable {
+        id -> Integer,
+        my_enum -> Nullable<MyEnumMapping>,
+    }
 }
 
 #[cfg(feature = "postgres")]

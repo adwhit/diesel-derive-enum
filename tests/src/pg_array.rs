@@ -40,10 +40,10 @@ fn enum_query() {
 
 table! {
     use diesel::sql_types::{Integer, Array};
-    use super::MyEnumPgMapping;
+    use super::MyEnumMapping;
     test_array {
         id -> Integer,
-        my_enum_arr -> Array<MyEnumPgMapping>,
+        my_enum_arr -> Array<MyEnumMapping>,
     }
 }
 

@@ -1,31 +1,15 @@
 use diesel::prelude::*;
 
 use diesel_derive_enum::DbEnum;
+use diesel::connection::SimpleConnection;
 
 #[derive(Debug, PartialEq, DbEnum, Clone)]
-#[cfg_attr(feature = "postgres", DieselTypePath = "MyEnumPgMapping")]
 pub enum MyEnum {
     Foo,
     Bar,
     BazQuxx,
 }
 
-#[cfg(feature = "postgres")]
-#[derive(diesel::sql_types::SqlType, diesel::query_builder::QueryId)]
-#[diesel(postgres_type(name = "my_enum"))]
-pub struct MyEnumPgMapping;
-
-#[cfg(feature = "postgres")]
-table! {
-    use diesel::sql_types::Integer;
-    use super::MyEnumPgMapping;
-    test_simple {
-        id -> Integer,
-        my_enum -> MyEnumPgMapping,
-    }
-}
-
-#[cfg(any(feature = "mysql", feature = "sqlite"))]
 table! {
     use diesel::sql_types::Integer;
     use super::MyEnumMapping;
@@ -44,7 +28,6 @@ pub struct Simple {
 
 #[cfg(feature = "postgres")]
 pub fn get_connection() -> PgConnection {
-    use diesel::connection::SimpleConnection;
     let database_url =
         ::std::env::var("PG_TEST_DATABASE_URL").expect("Env var PG_TEST_DATABASE_URL not set");
     let mut conn = PgConnection::establish(&database_url)
@@ -95,7 +78,6 @@ pub fn sample_data() -> Vec<Simple> {
 
 #[cfg(feature = "postgres")]
 pub fn create_table(conn: &mut PgConnection) {
-    use diesel::connection::SimpleConnection;
     conn.batch_execute(
         r#"
         CREATE TYPE my_enum AS ENUM ('foo', 'bar', 'baz_quxx');
@@ -110,7 +92,6 @@ pub fn create_table(conn: &mut PgConnection) {
 
 #[cfg(feature = "mysql")]
 pub fn create_table(conn: &mut MysqlConnection) {
-    use diesel::connection::SimpleConnection;
     conn.batch_execute(
         r#"
         CREATE TEMPORARY TABLE IF NOT EXISTS test_simple (
@@ -124,7 +105,6 @@ pub fn create_table(conn: &mut MysqlConnection) {
 
 #[cfg(feature = "sqlite")]
 pub fn create_table(conn: &mut SqliteConnection) {
-    use diesel::connection::SimpleConnection;
     conn.batch_execute(
         r#"
         CREATE TABLE test_simple (

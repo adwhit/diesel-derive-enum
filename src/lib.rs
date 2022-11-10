@@ -36,15 +36,16 @@ use syn::*;
 pub fn derive(input: TokenStream) -> TokenStream {
     let input: DeriveInput = parse_macro_input!(input as DeriveInput);
 
-    let existing_mapping_path = type_from_attrs(&input.attrs, "ExistingTypePath");
+    let existing_mapping_path = val_from_attrs(&input.attrs, "ExistingTypePath");
     if !cfg!(feature = "postgres") && existing_mapping_path.is_some() {
         panic!("ExistingTypePath attribute only applies when the 'postgres' feature is enabled");
     }
 
+    // we could allow a default value here but... I'm not very keen
     // let existing_mapping_path = existing_mapping_path
     //     .unwrap_or_else(|| format!("crate::schema::sql_types::{}", input.ident));
 
-    let pg_internal_type = type_from_attrs(&input.attrs, "PgType");
+    let pg_internal_type = val_from_attrs(&input.attrs, "PgType");
 
     if existing_mapping_path.is_some() && pg_internal_type.is_some() {
         panic!("Cannot specify both `ExistingTypePath` and `PgType` attributes");
@@ -52,7 +53,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
 
     let pg_internal_type = pg_internal_type.unwrap_or(input.ident.to_string().to_snake_case());
 
-    let new_diesel_mapping = type_from_attrs(&input.attrs, "DieselType");
+    let new_diesel_mapping = val_from_attrs(&input.attrs, "DieselType");
     if existing_mapping_path.is_some() && new_diesel_mapping.is_some() {
         panic!("Cannot specify both `ExistingTypePath` and `DieselType` attributes");
     }
@@ -61,7 +62,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
 
     // Maintain backwards compatibility by defaulting to snake case.
     let case_style =
-        type_from_attrs(&input.attrs, "DbValueStyle").unwrap_or_else(|| "snake_case".to_string());
+        val_from_attrs(&input.attrs, "DbValueStyle").unwrap_or_else(|| "snake_case".to_string());
     let case_style = CaseStyle::from_string(&case_style);
 
     let existing_mapping_path = existing_mapping_path.map(|v| {
@@ -92,7 +93,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
     }
 }
 
-fn type_from_attrs(attrs: &[Attribute], attrname: &str) -> Option<String> {
+fn val_from_attrs(attrs: &[Attribute], attrname: &str) -> Option<String> {
     for attr in attrs {
         if attr.path.is_ident(attrname) {
             match attr.parse_meta().ok()? {
@@ -100,7 +101,10 @@ fn type_from_attrs(attrs: &[Attribute], attrname: &str) -> Option<String> {
                     lit: Lit::Str(lit_str),
                     ..
                 }) => return Some(lit_str.value()),
-                _ => return None,
+                _ => panic!(
+                    "Attribute '{}' must have form: {} = \"value\"",
+                    attrname, attrname
+                ),
             }
         }
     }
@@ -160,7 +164,7 @@ fn generate_derive_enum_impls(
     let variants_db: Vec<String> = variants
         .iter()
         .map(|variant| {
-            type_from_attrs(&variant.attrs, "db_rename")
+            val_from_attrs(&variant.attrs, "db_rename")
                 .unwrap_or_else(|| stylize_value(&variant.ident.to_string(), case_style))
         })
         .collect();
