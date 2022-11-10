@@ -66,3 +66,8 @@ jobs:
         with:
           command: test
           args: --manifest-path tests/Cargo.toml --features sqlite
+
+      - name: Install Diesel-CLI
+        run: |
+          cargo install --features postgres --no-default-features diesel_cli
+          diesel --help

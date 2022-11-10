@@ -37,7 +37,7 @@ fn enum_round_trip() {
 
     connection.batch_execute(
         r#"
-        CREATE TYPE my_remote_enum AS ENUM ('foo', 'bar', 'baz_quxx');
+        CREATE TYPE my_remote_enum AS ENUM ('this', 'that');
         CREATE TABLE test_remote (
             id SERIAL PRIMARY KEY,
             my_enum my_remote_enum NOT NULL
