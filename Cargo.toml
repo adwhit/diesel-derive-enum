@@ -8,7 +8,7 @@ homepage = "http://github.com/adwhit/diesel-derive-enum"
 keywords = ["diesel", "postgres", "sqlite", "mysql", "sql"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 quote = "1"

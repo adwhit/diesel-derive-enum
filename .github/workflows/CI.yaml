@@ -10,7 +10,7 @@ jobs:
       matrix:
         rust:
           - stable
-          - 1.51.0
+          - 1.56.1
 
     services:
       postgres:
@@ -71,3 +71,11 @@ jobs:
         run: |
           cargo install --features postgres --no-default-features diesel_cli
           diesel --help
+
+      - name: Run Diesel-CLI tests
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432
+        run: |
+          cd tests_with_diesel_cli
+          diesel migration run --config-file custom.diesel.toml
+          cargo test
