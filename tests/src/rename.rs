@@ -3,16 +3,8 @@ use diesel::prelude::*;
 #[cfg(any(feature = "sqlite", feature = "postgres", feature = "mysql"))]
 use crate::common::get_connection;
 
-#[derive(diesel::sql_types::SqlType, diesel::query_builder::QueryId)]
-#[diesel(postgres_type(name = "Some_External_Type"))]
-pub struct Some_Internal_Type_Pg;
-
 #[derive(Debug, PartialEq, diesel_derive_enum::DbEnum)]
-#[cfg_attr(
-    any(feature = "mysql", feature = "sqlite"),
-    DieselType = "Some_Internal_Type"
-)]
-#[cfg_attr(feature = "postgres", DieselTypePath = "Some_Internal_Type_Pg")]
+#[DieselType = "Some_Internal_Type"]
 pub enum SomeEnum {
     #[db_rename = "mod"]
     Mod,
@@ -22,16 +14,6 @@ pub enum SomeEnum {
     WithASpace,
 }
 
-#[cfg(feature = "postgres")]
-table! {
-    use diesel::sql_types::Integer;
-    use super::Some_Internal_Type_Pg;
-    test_rename {
-        id -> Integer,
-        renamed -> Some_Internal_Type_Pg,
-    }
-}
-#[cfg(any(feature = "mysql", feature = "sqlite"))]
 table! {
     use diesel::sql_types::Integer;
     use super::Some_Internal_Type;

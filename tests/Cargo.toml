@@ -2,10 +2,10 @@
 name = "tests"
 version = "0.1.0"
 authors = ["Alex Whitney <adwhit@fastmail.com>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
-diesel = { version = "2.0.0-rc.0" }
+diesel = "2.0.2"
 diesel-derive-enum = { path = "./.." }
 
 [features]
