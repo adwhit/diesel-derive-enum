@@ -77,5 +77,14 @@ jobs:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432
         run: |
           cd tests_with_diesel_cli
-          diesel migration run --config-file custom.diesel.toml
+
+          # with default schema
+          diesel migration run
           cargo test
+          rm -rf src/schema.rs
+          diesel migration revert
+
+          # create a custom schema
+          diesel migration run --config-file custom.diesel.toml
+          cargo test --features custom
+          rm -rf src/custom_schema.rs

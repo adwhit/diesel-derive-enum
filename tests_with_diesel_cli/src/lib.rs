@@ -1,7 +1,12 @@
+#[cfg(not(feature = "custom"))]
 pub mod schema;
+#[cfg(not(feature = "custom"))]
 pub mod with_default_schema;
 
+#[cfg(feature = "custom")]
 pub mod custom_schema;
+
+#[cfg(feature = "custom")]
 pub mod with_custom_schema;
 
 pub use diesel::pg::PgConnection as Conn;

@@ -7,3 +7,6 @@ edition = "2021"
 [dependencies]
 diesel = { version = "2.0.2", features = ["postgres"] }
 diesel-derive-enum = { path = "./..", features = ["postgres"]}
+
+[features]
+custom = []
