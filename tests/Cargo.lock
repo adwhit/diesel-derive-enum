@@ -33,7 +33,7 @@ dependencies = [
 
 [[package]]
 name = "diesel-derive-enum"
-version = "2.0.0-rc.0"
+version = "2.0.0"
 dependencies = [
  "heck",
  "proc-macro2",
@@ -88,9 +88,9 @@ checksum = "112c678d4050afce233f4f2852bb2eb519230b3cf12f33585275537d7e41578d"
 
 [[package]]
 name = "libsqlite3-sys"
-version = "0.23.2"
+version = "0.25.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d2cafc7c74096c336d9d27145f7ebd4f4b6f95ba16aa5a282387267e6925cb58"
+checksum = "29f835d03d717946d28b1d1ed632eb6f0e24a299388ee623d0c23118d3e8a7fa"
 dependencies = [
  "pkg-config",
  "vcpkg",
