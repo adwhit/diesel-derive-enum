@@ -38,5 +38,12 @@ mod tests {
         };
         let that = insert(&mut conn, &this).unwrap();
         assert_eq!(this, that);
+
+        // make a query that requires QueryId trait to exist
+        let _: Vec<Simple> = simple::table
+            .filter(simple::some_value.eq(MyEnum::Foo))
+            .limit(1)
+            .load(&mut conn)
+            .unwrap();
     }
 }
