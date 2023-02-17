@@ -31,6 +31,12 @@ Tedious to do by hand, easy to do with a `derive` macro - enter `diesel-derive-e
 The latest release, `2.0.1`, is tested against `diesel 2.0.2` and `rustc 1.57`.
 For earlier versions of `diesel`, check out the 1.X releases of this crate.
 
+## Upgrading from 2.0.0-rc.0
+
+There is a single breaking change. If you are using `postgres` and `diesel-cli`, you _must_
+now add an `ExistingTypePath` annotation to your enum (see below). This annotation is renamed
+from the (previously optional) `DieselTypePath`.
+
 ## Setup with Diesel CLI
 
 This crate integrates nicely with
