@@ -28,7 +28,7 @@ Unfortunately, it won't work out of the box, because any type which
 we wish to use with Diesel must implement various traits.
 Tedious to do by hand, easy to do with a `derive` macro - enter `diesel-derive-enum`.
 
-The latest release, `2.0.1`, is tested against `diesel 2.0.2` and `rustc 1.57`.
+The latest release, `2.1.0`, is tested against `diesel 2.1.0` and `rustc 1.65`.
 For earlier versions of `diesel`, check out the 1.X releases of this crate.
 
 ## Upgrading from 2.0.0-rc.0
