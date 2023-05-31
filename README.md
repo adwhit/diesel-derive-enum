@@ -31,11 +31,13 @@ Tedious to do by hand, easy to do with a `derive` macro - enter `diesel-derive-e
 The latest release, `2.1.0`, is tested against `diesel 2.1.0` and `rustc 1.65` (we try to keep in lock-step with `diesel`).
 For earlier versions of `diesel`, check out the `2.0.1` and  `1.*` releases of this crate.
 
-## Upgrading from `2.0.0` -> `2.1.0`
+## Upgrading from `2.0.x` -> `2.1.0`
 
-Due to changes in upstream `diesel_cli`, you may need to modify your existing `diesel.toml` file.
-As of version `2.1.0`, it **must** contain the following line:
+Using `diesel-cli`? Due to an upstream change, you may need to modify your existing `diesel.toml` file.
+As of version `2.1.0`, it **must** contain the following lines:
 ```
+[print-schema]
+# ... other config ...
 custom_type_derives = ["diesel::query_builder::QueryId"]
 ```
 So if it doesn't - add it!
