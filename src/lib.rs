@@ -95,10 +95,14 @@ pub fn derive(input: TokenStream) -> TokenStream {
 
 fn val_from_attrs(attrs: &[Attribute], attrname: &str) -> Option<String> {
     for attr in attrs {
-        if attr.path.is_ident(attrname) {
-            match attr.parse_meta().ok()? {
+        if attr.path().is_ident(attrname) {
+            match &attr.meta {
                 Meta::NameValue(MetaNameValue {
-                    lit: Lit::Str(lit_str),
+                    value:
+                        Expr::Lit(ExprLit {
+                            lit: Lit::Str(lit_str),
+                            ..
+                        }),
                     ..
                 }) => return Some(lit_str.value()),
                 _ => panic!(
