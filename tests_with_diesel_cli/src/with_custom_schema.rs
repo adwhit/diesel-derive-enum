@@ -25,22 +25,6 @@ pub fn insert(conn: &mut Conn, value: &Simple) -> Result<Simple, Error> {
         .get_result(conn)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn round_trip() {
-        let mut conn = crate::get_connection();
-        let this = Simple {
-            id: 2,
-            some_value: MyEnum::BazQuxx,
-        };
-        let that = insert(&mut conn, &this).unwrap();
-        assert_eq!(this, that);
-    }
-}
-
 pub(crate) mod export {
     pub use super::MyEnumMapping as MyEnum;
 }

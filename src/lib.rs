@@ -304,7 +304,7 @@ fn generate_new_diesel_mapping(
     // Note - we only generate a new mapping for mysql and sqlite, postgres
     // should already have one
     quote! {
-        #[derive(SqlType, Clone)]
+        #[derive(Clone, SqlType, diesel::query_builder::QueryId)]
         #[diesel(mysql_type(name = "Enum"))]
         #[diesel(sqlite_type(name = "Text"))]
         #[diesel(postgres_type(name = #pg_internal_type))]
