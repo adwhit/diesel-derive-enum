@@ -95,10 +95,14 @@ pub fn derive(input: TokenStream) -> TokenStream {
 
 fn val_from_attrs(attrs: &[Attribute], attrname: &str) -> Option<String> {
     for attr in attrs {
-        if attr.path.is_ident(attrname) {
-            match attr.parse_meta().ok()? {
+        if attr.path().is_ident(attrname) {
+            match &attr.meta {
                 Meta::NameValue(MetaNameValue {
-                    lit: Lit::Str(lit_str),
+                    value:
+                        Expr::Lit(ExprLit {
+                            lit: Lit::Str(lit_str),
+                            ..
+                        }),
                     ..
                 }) => return Some(lit_str.value()),
                 _ => panic!(
@@ -232,7 +236,7 @@ fn generate_derive_enum_impls(
             deserialize::{self, FromSql},
             expression::AsExpression,
             internal::derives::as_expression::Bound,
-            query_builder::{bind_collector::RawBytesBindCollector, QueryId},
+            query_builder::{bind_collector::RawBytesBindCollector},
             row::Row,
             serialize::{self, IsNull, Output, ToSql},
             sql_types::*,
@@ -300,7 +304,7 @@ fn generate_new_diesel_mapping(
     // Note - we only generate a new mapping for mysql and sqlite, postgres
     // should already have one
     quote! {
-        #[derive(SqlType, Clone)]
+        #[derive(Clone, SqlType, diesel::query_builder::QueryId)]
         #[diesel(mysql_type(name = "Enum"))]
         #[diesel(sqlite_type(name = "Text"))]
         #[diesel(postgres_type(name = #pg_internal_type))]
@@ -313,16 +317,6 @@ fn generate_common_impls(
     enum_ty: &Ident,
 ) -> proc_macro2::TokenStream {
     quote! {
-
-        // NOTE: at some point this impl will no longer be necessary
-        // for diesel-cli schemas
-        // See https://github.com/adwhit/diesel-derive-enum/issues/10
-        // and https://github.com/adwhit/diesel-derive-enum/pull/79
-        impl QueryId for #diesel_mapping {
-            type QueryId = #diesel_mapping;
-            const HAS_STATIC_QUERY_ID: bool = true;
-        }
-
         impl AsExpression<#diesel_mapping> for #enum_ty {
             type Expression = Bound<#diesel_mapping, Self>;
 

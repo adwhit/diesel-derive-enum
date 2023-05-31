@@ -10,7 +10,7 @@ jobs:
       matrix:
         rust:
           - stable
-          - 1.57
+          - 1.65
 
     services:
       postgres:
@@ -79,10 +79,11 @@ jobs:
           cd tests_with_diesel_cli
 
           # with default schema
+          diesel setup
           diesel migration run
           cargo test
-          rm -rf src/schema.rs
           diesel migration revert
+          rm src/schema.rs diesel.toml
 
           # create a custom schema
           diesel migration run --config-file custom.diesel.toml

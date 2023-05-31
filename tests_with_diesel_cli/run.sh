@@ -11,10 +11,12 @@ docker-compose down
 docker-compose up -d
 sleep 2
 
+rm -f src/schema.rs diesel.toml
+diesel setup
 diesel migration run
 cargo test
 diesel migration revert
-rm src/schema.rs
+rm src/schema.rs diesel.toml
 
 # create a custom schema
 diesel migration run --config-file custom.diesel.toml
