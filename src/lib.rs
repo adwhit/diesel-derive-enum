@@ -407,7 +407,7 @@ fn generate_postgres_impl(
             use super::*;
             use diesel::pg::{Pg, PgValue};
 
-            #clone_impl
+            // #clone_impl
 
             impl FromSql<#diesel_mapping, Pg> for #enum_ty {
                 fn from_sql(raw: PgValue) -> deserialize::Result<Self> {
