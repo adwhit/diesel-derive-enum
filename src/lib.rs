@@ -78,7 +78,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
     });
     let new_diesel_mapping = Ident::new(new_diesel_mapping.as_ref(), Span::call_site());
 
-    let with_clone = !contains_in_attrs(&input.attrs, "DontImplCloneOnSqlType");
+    let with_clone = !has_attr(&input.attrs, "DontImplCloneOnSqlType");
 
     if let Data::Enum(syn::DataEnum {
         variants: data_variants,
@@ -126,7 +126,7 @@ fn val_from_attrs(attrs: &[Attribute], attrname: &str) -> Option<String> {
     None
 }
 
-fn contains_in_attrs(attrs: &[Attribute], attrname: &str) -> bool {
+fn has_attr(attrs: &[Attribute], attrname: &str) -> bool {
     attrs.iter().any(|e| e.path().is_ident(attrname))
 }
 
