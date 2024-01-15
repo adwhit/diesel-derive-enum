@@ -10,7 +10,7 @@ jobs:
       matrix:
         rust:
           - stable
-          - 1.65
+          - 1.68
 
     services:
       postgres:
@@ -68,13 +68,6 @@ jobs:
           args: --manifest-path tests/Cargo.toml --features sqlite
 
       - name: Install Diesel-CLI
-        if: ${{ matrix.rust != 'stable' }}
-        run: |
-          cargo install --features postgres --no-default-features diesel_cli@2.0.1
-          diesel --help
-
-      - name: Install Diesel-CLI
-        if: ${{ matrix.rust == 'stable' }}
         run: |
           cargo install --features postgres --no-default-features diesel_cli
           diesel --help
