@@ -31,7 +31,14 @@ use syn::*;
 /// * `#[db_rename = "variant"]` specifies the db name for a specific variant.
 #[proc_macro_derive(
     DbEnum,
-    attributes(PgType, DieselType, ExistingTypePath, DbValueStyle, db_rename)
+    attributes(
+        PgType,
+        DieselType,
+        ExistingTypePath,
+        DbValueStyle,
+        db_rename,
+        DontImplCloneOnSqlType
+    )
 )]
 pub fn derive(input: TokenStream) -> TokenStream {
     let input: DeriveInput = parse_macro_input!(input as DeriveInput);
@@ -70,6 +77,9 @@ pub fn derive(input: TokenStream) -> TokenStream {
             .expect("ExistingTypePath is not a valid token")
     });
     let new_diesel_mapping = Ident::new(new_diesel_mapping.as_ref(), Span::call_site());
+
+    let with_clone = !has_attr(&input.attrs, "DontImplCloneOnSqlType");
+
     if let Data::Enum(syn::DataEnum {
         variants: data_variants,
         ..
@@ -81,6 +91,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
             &pg_internal_type,
             case_style,
             &input.ident,
+            with_clone,
             &data_variants,
         )
     } else {
@@ -113,6 +124,10 @@ fn val_from_attrs(attrs: &[Attribute], attrname: &str) -> Option<String> {
         }
     }
     None
+}
+
+fn has_attr(attrs: &[Attribute], attrname: &str) -> bool {
+    attrs.iter().any(|e| e.path().is_ident(attrname))
 }
 
 /// Defines the casing for the database representation.  Follows serde naming convention.
@@ -148,6 +163,7 @@ fn generate_derive_enum_impls(
     pg_internal_type: &str,
     case_style: CaseStyle,
     enum_ty: &Ident,
+    with_clone: bool,
     variants: &syn::punctuated::Punctuated<Variant, syn::token::Comma>,
 ) -> TokenStream {
     let modname = Ident::new(&format!("db_enum_impl_{}", enum_ty), Span::call_site());
@@ -201,7 +217,7 @@ fn generate_derive_enum_impls(
         match existing_mapping_path {
             Some(path) => {
                 let common_impls_on_existing_diesel_mapping = generate_common_impls(path, enum_ty);
-                let postgres_impl = generate_postgres_impl(path, enum_ty, true);
+                let postgres_impl = generate_postgres_impl(path, enum_ty, with_clone);
                 Some(quote! {
                     #common_impls_on_existing_diesel_mapping
                     #postgres_impl

@@ -9,6 +9,8 @@ mod nullable;
 #[cfg(feature = "postgres")]
 mod pg_array;
 #[cfg(feature = "postgres")]
+mod pg_clone_impl;
+#[cfg(feature = "postgres")]
 mod pg_remote_type;
 mod simple;
 mod value_style;
