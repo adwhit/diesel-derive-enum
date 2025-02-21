@@ -7,3 +7,4 @@ tests_with_diesel_cli/src/custom_schema.rs
 tests_with_diesel_cli/src/schema.rs
 
 .DS_Store
+.idea
