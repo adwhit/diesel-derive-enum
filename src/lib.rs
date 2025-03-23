@@ -263,21 +263,6 @@ fn generate_derive_enum_impls(
         })
         .collect();
 
-    // Check for deprecated db_rename attributes
-    for variant in variants.iter() {
-        for attr in &variant.attrs {
-            if attr.path().is_ident("db_rename") {
-                let variant_name = &variant.ident;
-                return syn::Error::new(
-                    attr.span(),
-                    format!("Invalid attribute format on variant '{}': #[db_rename]. Use the namespaced attribute instead: #[db_enum(rename = \"...\")]", variant_name)
-                )
-                .to_compile_error()
-                .into();
-            }
-        }
-    }
-
     let variants_db: Vec<String> = match variants
         .iter()
         .map(|variant| {
