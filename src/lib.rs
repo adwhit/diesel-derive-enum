@@ -31,10 +31,7 @@ use syn::*;
 /// ## Variant attributes
 ///
 /// * `#[db_enum(rename = "variant")]` specifies the db name for a specific variant.
-#[proc_macro_derive(
-    DbEnum,
-    attributes(db_enum)
-)]
+#[proc_macro_derive(DbEnum, attributes(db_enum))]
 pub fn derive(input: TokenStream) -> TokenStream {
     let input: DeriveInput = parse_macro_input!(input as DeriveInput);
 
@@ -59,7 +56,8 @@ pub fn derive(input: TokenStream) -> TokenStream {
         new_diesel_mapping.unwrap_or_else(|| format!("{}Mapping", input.ident));
 
     // Default to snake_case if not specified
-    let case_style = get_db_enum_attr_value(&input.attrs, "value_style").unwrap_or_else(|| "snake_case".to_string());
+    let case_style = get_db_enum_attr_value(&input.attrs, "value_style")
+        .unwrap_or_else(|| "snake_case".to_string());
     let case_style = CaseStyle::from_string(&case_style);
 
     // In v3, Clone implementation is opt-in
@@ -104,14 +102,16 @@ fn get_db_enum_attr_value(attrs: &[Attribute], name: &str) -> Option<String> {
             };
 
             let mut result = None;
-            nested.parse_nested_meta(|meta| {
-                if meta.path.is_ident(name) {
-                    if let Ok(value) = meta.value()?.parse::<LitStr>() {
-                        result = Some(value.value());
+            nested
+                .parse_nested_meta(|meta| {
+                    if meta.path.is_ident(name) {
+                        if let Ok(value) = meta.value()?.parse::<LitStr>() {
+                            result = Some(value.value());
+                        }
                     }
-                }
-                Ok(())
-            }).ok();
+                    Ok(())
+                })
+                .ok();
 
             if result.is_some() {
                 return result;
@@ -131,12 +131,14 @@ fn has_db_enum_attr(attrs: &[Attribute], name: &str) -> bool {
             };
 
             let mut found = false;
-            nested.parse_nested_meta(|meta| {
-                if meta.path.is_ident(name) {
-                    found = true;
-                }
-                Ok(())
-            }).ok();
+            nested
+                .parse_nested_meta(|meta| {
+                    if meta.path.is_ident(name) {
+                        found = true;
+                    }
+                    Ok(())
+                })
+                .ok();
 
             if found {
                 return true;
