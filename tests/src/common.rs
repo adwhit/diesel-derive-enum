@@ -1,7 +1,7 @@
 use diesel::prelude::*;
 
-use diesel_derive_enum::DbEnum;
 use diesel::connection::SimpleConnection;
+use diesel_derive_enum::DbEnum;
 
 #[derive(Debug, PartialEq, DbEnum, Clone)]
 pub enum MyEnum {

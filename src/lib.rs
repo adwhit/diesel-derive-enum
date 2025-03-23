@@ -26,23 +26,24 @@ use syn::*;
 ///   the rust enum variants to each of the database variants. Either `camelCase`,
 ///   `kebab-case`, `PascalCase`, `SCREAMING_SNAKE_CASE`, `snake_case`,
 ///   `verbatim`. If omitted, uses `snake_case`.
+/// * `#[db_enum(pg_type = "pg-enum-name")]` specifies the name of the enum type
+///   as created in the Postgres database (does not apply to other databases)
+///   If omitted, uses rust enum name, snake_cased.
 /// * `#[db_enum(impl_clone_on_sql_mapping)]` opt-in to implementing `Clone` for the SQL type.
 ///   By default, Diesel itself already implements `Clone` for SQL types through custom_type_derives.
 ///
 /// ## Variant attributes
 ///
-/// * `#[db_enum(rename = "variant")]` specifies the db name for a specific variant.
+/// * `#[db_enum(rename = "renamed-variant")]` specifies the db name for a specific variant.
 #[proc_macro_derive(DbEnum, attributes(db_enum))]
 pub fn derive(input: TokenStream) -> TokenStream {
     let input: DeriveInput = parse_macro_input!(input as DeriveInput);
 
-    // Gather and validate all type-level attributes in one pass
-    let attrs_result = gather_db_enum_attrs(&input.attrs, false);
-    if let Err(e) = attrs_result {
-        return e.to_compile_error().into();
-    }
-
-    let attrs = attrs_result.unwrap();
+    // Gather and validate type-level attributes
+    let attrs = match gather_db_enum_attrs(&input.attrs) {
+        Ok(ok) => ok,
+        Err(e) => return e.to_compile_error().into(),
+    };
 
     // Check for feature-specific constraints
     if !cfg!(feature = "postgres") && attrs.existing_type_path.is_some() {
@@ -114,18 +115,6 @@ pub fn derive(input: TokenStream) -> TokenStream {
     }
 }
 
-/// Valid attribute names in the db_enum namespace for type-level attributes
-const VALID_TYPE_ATTRIBUTES: [&str; 5] = [
-    "existing_type_path",
-    "diesel_type",
-    "value_style",
-    "pg_type",
-    "impl_clone_on_sql_mapping",
-];
-
-/// Valid attribute names in the db_enum namespace for variant-level attributes
-const VALID_VARIANT_ATTRIBUTES: [&str; 1] = ["rename"];
-
 /// Container for all type-level attributes for DbEnum
 #[derive(Debug, Default)]
 struct DbEnumTypeAttrs {
@@ -164,18 +153,7 @@ impl CaseStyle {
 }
 
 /// Gather and validate all db_enum attributes from a list of attributes
-fn gather_db_enum_attrs(
-    attrs: &[Attribute],
-    is_variant: bool,
-) -> std::result::Result<DbEnumTypeAttrs, syn::Error> {
-    // Debug output
-
-    let valid_attrs = if is_variant {
-        &VALID_VARIANT_ATTRIBUTES[..]
-    } else {
-        &VALID_TYPE_ATTRIBUTES[..]
-    };
-
+fn gather_db_enum_attrs(attrs: &[Attribute]) -> Result<DbEnumTypeAttrs> {
     let mut result = DbEnumTypeAttrs::default();
 
     for attr in attrs.iter() {
@@ -186,56 +164,37 @@ fn gather_db_enum_attrs(
 
             // Process all the nested meta items in this db_enum attribute
             nested.parse_nested_meta(|meta| {
-                let attr_name = meta.path.get_ident().map_or_else(|| "unknown".to_string(), |i| i.to_string());
-                // Validate the attribute name
-                if !valid_attrs.contains(&attr_name.as_str()) {
-                    // Try to find a similar attribute name to suggest
-                                        let suggestion = valid_attrs.iter()
-                        .find(|&&valid| attr_name.contains(valid) || valid.contains(&attr_name))
-                        .unwrap_or(&valid_attrs[0]); // Default suggestion is the first valid attribute
-                    let context = if is_variant { "variant" } else { "type" };
-                    return Err(meta.error(format!(
-                        "Unknown db_enum {} attribute: '{}'. Did you mean '{}'? Valid attributes are: {:?}",
-                        context, attr_name, suggestion, valid_attrs
-                    )));}// Process known attributes
+                let attr_name = meta
+                    .path
+                    .get_ident()
+                    .ok_or_else(|| meta.error("expected ident"))?
+                    .to_string();
                 match attr_name.as_str() {
                     "existing_type_path" => {
                         if let Ok(value) = meta.value()?.parse::<LitStr>() {
                             result.existing_type_path = Some(value.value());
                         }
-                    },
+                    }
                     "diesel_type" => {
                         if let Ok(value) = meta.value()?.parse::<LitStr>() {
                             result.diesel_type = Some(value.value());
                         }
-                    },
+                    }
                     "value_style" => {
                         if let Ok(value) = meta.value()?.parse::<LitStr>() {
                             result.value_style = Some(value.value());
                         }
-                    },
+                    }
                     "pg_type" => {
                         if let Ok(value) = meta.value()?.parse::<LitStr>() {
                             result.pg_type = Some(value.value());
                         }
-                    },
+                    }
                     "impl_clone_on_sql_mapping" => {
                         result.impl_clone_on_sql_mapping = true;
-                    },
-                    "rename" if is_variant => {
-                        // For variant attributes, we only need to validate since the actual
-                        // handling is done separately in the variant_db generation code
-                        if meta.value().is_err() {
-                            return Err(meta.error(
-                                "The 'rename' attribute requires a value"
-                            ));
-                        }
-                    },
-                    _ => {
-                        // This should never happen due to our earlier validation
-                        return Err(meta.error(format!(
-                            "Unhandled attribute: {}", attr_name
-                        )));
+                    }
+                    other => {
+                        return Err(meta.error(format!("Unknown attribute: '{other}'")));
                     }
                 }
                 Ok(())
@@ -246,67 +205,31 @@ fn gather_db_enum_attrs(
 }
 
 /// Gets a variant-level attribute value, with validation for attribute names
-fn get_variant_db_enum_attr_value(
-    attrs: &[Attribute],
-    name: &str,
-) -> std::result::Result<Option<String>, syn::Error> {
-    // Ensure we're asking for a valid variant attribute
-    if !VALID_VARIANT_ATTRIBUTES.contains(&name) {
-        return Err(syn::Error::new(
-            Span::call_site(),
-            format!("Internal error: invalid variant attribute name: {}", name),
-        ));
-    }
-
+fn get_variant_db_enum_attr_value(attrs: &[Attribute]) -> Result<Option<String>> {
     for attr in attrs.iter() {
         if attr.path().is_ident("db_enum") {
             let Meta::List(nested) = &attr.meta else {
                 continue;
             };
 
-            let mut result = None;
-            let mut found_invalid = false;
-            let mut invalid_attr = String::new();
-            let mut invalid_span = Span::call_site();
+            let mut result: Option<String> = None;
 
-            nested
-                .parse_nested_meta(|meta| {
-                    let attr_name = meta
-                        .path
-                        .get_ident()
-                        .map_or_else(|| "unknown".to_string(), |i| i.to_string());
-
-                    // Validate the attribute name
-                    if !VALID_VARIANT_ATTRIBUTES.contains(&attr_name.as_str()) {
-                        found_invalid = true;
-                        invalid_attr = attr_name;
-                        invalid_span = meta.path.span();
+            nested.parse_nested_meta(|meta| {
+                let attr_name = meta
+                    .path
+                    .get_ident()
+                    .ok_or_else(|| meta.error("expected ident"))?;
+                if attr_name == "rename" {
+                    if let Ok(value) = meta.value()?.parse::<LitStr>() {
+                        result = Some(value.value());
                         return Ok(());
+                    } else {
+                        return Err(meta.error("attribute 'rename' has no value"));
                     }
-
-                    if attr_name == name {
-                        if let Ok(value) = meta.value()?.parse::<LitStr>() {
-                            result = Some(value.value());
-                        }
-                    }
-
-                    Ok(())
-                })
-                .ok();
-
-            if found_invalid {
-                // Try to find a similar attribute name to suggest
-                let suggestion = VALID_VARIANT_ATTRIBUTES
-                    .iter()
-                    .find(|&&valid| invalid_attr.contains(valid) || valid.contains(&invalid_attr))
-                    .unwrap_or(&VALID_VARIANT_ATTRIBUTES[0]);
-
-                return Err(syn::Error::new(
-                    invalid_span,
-                    format!("Unknown db_enum variant attribute: '{}'. Did you mean '{}'? Valid attributes are: {:?}",
-                        invalid_attr, suggestion, VALID_VARIANT_ATTRIBUTES)
-                ));
-            }
+                } else {
+                    return Err(meta.error(format!("Unhandled attribute: '{attr_name}'")));
+                }
+            })?;
 
             if result.is_some() {
                 return Ok(result);
@@ -355,20 +278,20 @@ fn generate_derive_enum_impls(
         }
     }
 
-    let variants_db: Vec<String> = variants
+    let variants_db: Vec<String> = match variants
         .iter()
         .map(|variant| {
-            // Use get_variant_db_enum_attr_value for variant attributes with validation
-            let rename_result = get_variant_db_enum_attr_value(&variant.attrs, "rename");
+            let rename_result = get_variant_db_enum_attr_value(&variant.attrs)?;
             match rename_result {
-                Ok(Some(rename)) => rename,
-                Ok(None) => stylize_value(&variant.ident.to_string(), case_style),
-                Err(e) => {
-                    return format!("Error: {}", e); // This will cause a runtime error if it happens, but it's cleaner than panicking
-                }
+                Some(rename) => Ok(rename),
+                None => Ok(stylize_value(&variant.ident.to_string(), case_style)),
             }
         })
-        .collect();
+        .collect::<Result<Vec<_>>>()
+    {
+        Ok(ok) => ok,
+        Err(e) => return e.to_compile_error().into(),
+    };
     let variants_db_bytes: Vec<LitByteStr> = variants_db
         .iter()
         .map(|variant_str| LitByteStr::new(variant_str.as_bytes(), Span::call_site()))
@@ -706,14 +629,14 @@ mod tests {
         };
 
         // Test valid attribute
-        let valid_result = gather_db_enum_attrs(&[valid_attr], false);
+        let valid_result = gather_db_enum_attrs(&[valid_attr]);
         assert!(valid_result.is_ok(), "Valid attribute should be accepted");
         if let Ok(attrs) = valid_result {
             assert_eq!(attrs.diesel_type, Some("MyType".to_string()));
         }
 
         // Test invalid attribute
-        let invalid_result = gather_db_enum_attrs(&[invalid_attr], false);
+        let invalid_result = gather_db_enum_attrs(&[invalid_attr]);
         assert!(
             invalid_result.is_err(),
             "Invalid attribute should be rejected"
@@ -729,17 +652,32 @@ mod tests {
 
     #[test]
     fn test_variant_attribute() {
-        // Test the variant rename attribute
-        let variant_attr: Attribute = parse_quote! {
-            #[db_enum(rename = "custom_name")]
-        };
+        {
+            let variant_attr: Attribute = parse_quote! {
+                #[db_enum(rename = "custom_name")]
+            };
 
-        let result = get_variant_db_enum_attr_value(&[variant_attr.clone()], "rename");
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap(), Some("custom_name".to_string()));
+            let result = get_variant_db_enum_attr_value(&[variant_attr.clone()]);
+            assert!(result.is_ok());
+            assert_eq!(result.unwrap(), Some("custom_name".to_string()));
+        }
 
-        // Test with invalid attribute lookup
-        let result = get_variant_db_enum_attr_value(&[variant_attr], "nonexistent_attr");
-        assert!(result.is_err());
+        {
+            let variant_attr_phony: Attribute = parse_quote! {
+                #[db_enum(phony = "phony")]
+            };
+
+            let result = get_variant_db_enum_attr_value(&[variant_attr_phony.clone()]);
+            assert!(result.is_err());
+        }
+
+        {
+            let variant_attr_fake: Attribute = parse_quote! {
+            #[db_enum(fake)]
+            };
+
+            let result = get_variant_db_enum_attr_value(&[variant_attr_fake.clone()]);
+            assert!(result.is_err());
+        }
     }
 }

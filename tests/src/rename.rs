@@ -4,7 +4,7 @@ use diesel::prelude::*;
 use crate::common::get_connection;
 
 #[derive(Debug, PartialEq, diesel_derive_enum::DbEnum)]
-#[db_enum(diesel_type = "Some_Internal_Type")]
+#[db_enum(diesel_type = "Some_Internal_Type", pg_type = "Some_External_Type")]
 pub enum SomeEnum {
     #[db_enum(rename = "mod")]
     Mod,
