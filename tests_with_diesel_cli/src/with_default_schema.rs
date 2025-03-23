@@ -5,7 +5,7 @@ use diesel::result::Error;
 use crate::schema::simple;
 
 #[derive(diesel_derive_enum::DbEnum, Debug, Copy, Clone, PartialEq, Eq)]
-#[ExistingTypePath = "crate::schema::sql_types::MyEnum"]
+#[db_enum(existing_type_path = "crate::schema::sql_types::MyEnum")]
 pub enum MyEnum {
     Foo,
     Bar,

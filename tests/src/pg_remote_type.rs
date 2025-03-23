@@ -24,7 +24,7 @@ struct Data {
 
 
 #[derive(Debug, PartialEq, Clone, diesel_derive_enum::DbEnum)]
-#[ExistingTypePath = "MyRemoteEnumMapping"]
+#[db_enum(existing_type_path = "MyRemoteEnumMapping")]
 pub enum MyRemoteEnum {
     This,
     That

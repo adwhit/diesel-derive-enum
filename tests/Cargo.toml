@@ -5,7 +5,7 @@ authors = ["Alex Whitney <adwhit@fastmail.com>"]
 edition = "2021"
 
 [dependencies]
-diesel = "2.1.0"
+diesel = "2.2.8"
 diesel-derive-enum = { path = "./.." }
 
 [features]

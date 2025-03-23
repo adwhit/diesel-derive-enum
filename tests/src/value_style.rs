@@ -4,15 +4,15 @@ use diesel::prelude::*;
 use crate::common::get_connection;
 
 #[derive(Debug, PartialEq, diesel_derive_enum::DbEnum)]
-#[DieselType = "Stylized_Internal_Type"]
-#[PgType = "Stylized_External_Type"]
-#[DbValueStyle = "PascalCase"]
+#[db_enum(diesel_type = "Stylized_Internal_Type")]
+#[db_enum(pg_type = "Stylized_External_Type")]
+#[db_enum(value_style = "PascalCase")]
 pub enum StylizedEnum {
     FirstVariant,
     secondThing,
     third_item,
     FOURTH_VALUE,
-    #[db_rename = "crazy fifth"]
+    #[db_enum(rename = "crazy fifth")]
     cRaZy_FiFtH,
 }
 
