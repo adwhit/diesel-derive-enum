@@ -33,12 +33,11 @@ For earlier versions of `diesel`, check out the `2.1.0` and earlier releases of 
 
 ## What's New in v3
 
-Version 3.0.0 introduces several significant changes:
+Version 3.0.0 introduces several significant **BREAKING CHANGES**:
 
 1. **Attribute Namespacing**: All attributes are now namespaced under `db_enum(...)` for better clarity and organization
-2. **Breaking Change**: Removed backward compatibility with old attribute formats
-3. **Clone Implementation Change**: Clone is no longer implemented by default on SQL types (now opt-in rather than opt-out)
-4. **MSRV Update**: The minimum supported Rust version is now 1.82
+2. **Clone Implementation Change**: Clone is no longer implemented by default on SQL types (now opt-in rather than opt-out)
+3. **MSRV Update**: The minimum supported Rust version is now 1.82
 
 ## Setup with Diesel CLI
 

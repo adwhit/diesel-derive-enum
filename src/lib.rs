@@ -6,8 +6,10 @@ use heck::{ToKebabCase, ToLowerCamelCase, ToShoutySnakeCase, ToSnakeCase, ToUppe
 use proc_macro::TokenStream;
 use proc_macro2::{Ident, Span};
 use quote::quote;
-use syn::spanned::Spanned;
-use syn::*;
+use syn::{
+    parse_macro_input, punctuated::Punctuated, Attribute, Data, DeriveInput, Fields, LitByteStr,
+    LitStr, Meta, Result, Variant,
+};
 
 /// Implement the traits necessary for inserting the enum directly into a database
 ///
@@ -246,7 +248,7 @@ fn generate_derive_enum_impls(
     case_style: CaseStyle,
     enum_ty: &Ident,
     with_clone: bool,
-    variants: &syn::punctuated::Punctuated<Variant, syn::token::Comma>,
+    variants: &Punctuated<Variant, syn::token::Comma>,
 ) -> TokenStream {
     let modname = Ident::new(&format!("db_enum_impl_{}", enum_ty), Span::call_site());
     let variant_ids: Vec<proc_macro2::TokenStream> = variants
