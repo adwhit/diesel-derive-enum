@@ -28,7 +28,7 @@ Unfortunately, it won't work out of the box, because any type which
 we wish to use with Diesel must implement various traits.
 Tedious to do by hand, easy to do with a `derive` macro - enter `diesel-derive-enum`.
 
-The latest release, `3.0.0`, is tested against `diesel 2.2.8` and `rustc 1.78`
+The latest release, `3.0.0`, is tested against `diesel 2.2.8` and `rustc 1.82`
 For earlier versions of `diesel`, check out the `2.1.0` and earlier releases of this crate.
 
 ## What's New in v3
@@ -38,7 +38,7 @@ Version 3.0.0 introduces several significant changes:
 1. **Attribute Namespacing**: All attributes are now namespaced under `db_enum(...)` for better clarity and organization
 2. **Breaking Change**: Removed backward compatibility with old attribute formats
 3. **Clone Implementation Change**: Clone is no longer implemented by default on SQL types (now opt-in rather than opt-out)
-4. **MSRV Update**: The minimum supported Rust version is now 1.78
+4. **MSRV Update**: The minimum supported Rust version is now 1.82
 
 ## Setup with Diesel CLI
 
