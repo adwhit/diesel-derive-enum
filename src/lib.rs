@@ -25,7 +25,7 @@ use syn::*;
 ///   the rust enum variants to each of the database variants. Either `camelCase`,
 ///   `kebab-case`, `PascalCase`, `SCREAMING_SNAKE_CASE`, `snake_case`,
 ///   `verbatim`. If omitted, uses `snake_case`.
-/// * `#[db_enum(impl_clone_on_sql_type)]` opt-in to implementing `Clone` for the SQL type.
+/// * `#[db_enum(impl_clone_on_sql_mapping)]` opt-in to implementing `Clone` for the SQL type.
 ///   By default, Diesel itself already implements `Clone` for SQL types through custom_type_derives.
 ///
 /// ## Variant attributes
@@ -61,7 +61,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
     let case_style = CaseStyle::from_string(&case_style);
 
     // In v3, Clone implementation is opt-in
-    let with_clone = has_db_enum_attr(&input.attrs, "impl_clone_on_sql_type");
+    let with_clone = has_db_enum_attr(&input.attrs, "impl_clone_on_sql_mapping");
 
     let existing_mapping_path = existing_mapping_path.map(|v| {
         v.parse::<proc_macro2::TokenStream>()

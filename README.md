@@ -275,7 +275,7 @@ Postgres arrays work too! See [this example.](tests/src/pg_array.rs)
 | `diesel_type` | Name for the Diesel type to create | `<enum name>Mapping` | `#[db_enum(diesel_type = "CustomMapping")]` |
 | `pg_type` | Name of PostgreSQL type | `<enum name in snake_case>` | `#[db_enum(pg_type = "custom_type")]` |
 | `value_style` | Renaming style from Rust enum to database | `snake_case` | `#[db_enum(value_style = "camelCase")]` |
-| `impl_clone_on_sql_type` | Implement Clone for the SQL type | `false` | `#[db_enum(impl_clone_on_sql_type)]` |
+| `impl_clone_on_sql_mapping` | Implement Clone for the SQL type | `false` | `#[db_enum(impl_clone_on_sql_mapping)]` |
 
 ### Variant attributes
 
