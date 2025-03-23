@@ -26,10 +26,10 @@ pub struct NeedsCloneMapping;
 
 #[test]
 fn test_already_has_clone() {
-    AlreadyHasCloneMapping.clone();
+    let _ = AlreadyHasCloneMapping.clone();
 }
 
 #[test]
 fn test_needs_clone() {
-    NeedsCloneMapping.clone();
+    let _ = NeedsCloneMapping.clone();
 }

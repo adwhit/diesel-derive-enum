@@ -1,4 +1,6 @@
 local-tests:
+    cargo test
+
     cd tests && cargo test --features postgres --no-run
     cd tests && cargo test --features mysql --no-run
     cd tests && cargo test --features sqlite --no-run

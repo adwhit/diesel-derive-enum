@@ -6,6 +6,7 @@ use heck::{ToKebabCase, ToLowerCamelCase, ToShoutySnakeCase, ToSnakeCase, ToUppe
 use proc_macro::TokenStream;
 use proc_macro2::{Ident, Span};
 use quote::quote;
+use syn::spanned::Spanned;
 use syn::*;
 
 /// Implement the traits necessary for inserting the enum directly into a database
@@ -35,35 +36,56 @@ use syn::*;
 pub fn derive(input: TokenStream) -> TokenStream {
     let input: DeriveInput = parse_macro_input!(input as DeriveInput);
 
-    // Parse the existing_type_path attribute
-    let existing_mapping_path = get_db_enum_attr_value(&input.attrs, "existing_type_path");
-    if !cfg!(feature = "postgres") && existing_mapping_path.is_some() {
-        panic!("existing_type_path attribute only applies when the 'postgres' feature is enabled");
+    // Gather and validate all type-level attributes in one pass
+    let attrs_result = gather_db_enum_attrs(&input.attrs, false);
+    if let Err(e) = attrs_result {
+        return e.to_compile_error().into();
     }
 
-    let pg_internal_type = get_db_enum_attr_value(&input.attrs, "pg_type");
-    if existing_mapping_path.is_some() && pg_internal_type.is_some() {
-        panic!("Cannot specify both `existing_type_path` and `pg_type` attributes");
+    let attrs = attrs_result.unwrap();
+
+    // Check for feature-specific constraints
+    if !cfg!(feature = "postgres") && attrs.existing_type_path.is_some() {
+        return syn::Error::new(
+            Span::call_site(),
+            "existing_type_path attribute only applies when the 'postgres' feature is enabled",
+        )
+        .to_compile_error()
+        .into();
     }
 
-    let pg_internal_type = pg_internal_type.unwrap_or(input.ident.to_string().to_snake_case());
-
-    let new_diesel_mapping = get_db_enum_attr_value(&input.attrs, "diesel_type");
-    if existing_mapping_path.is_some() && new_diesel_mapping.is_some() {
-        panic!("Cannot specify both `existing_type_path` and `diesel_type` attributes");
+    if attrs.existing_type_path.is_some() && attrs.pg_type.is_some() {
+        return syn::Error::new(
+            Span::call_site(),
+            "Cannot specify both `existing_type_path` and `pg_type` attributes",
+        )
+        .to_compile_error()
+        .into();
     }
-    let new_diesel_mapping =
-        new_diesel_mapping.unwrap_or_else(|| format!("{}Mapping", input.ident));
 
-    // Default to snake_case if not specified
-    let case_style = get_db_enum_attr_value(&input.attrs, "value_style")
-        .unwrap_or_else(|| "snake_case".to_string());
-    let case_style = CaseStyle::from_string(&case_style);
+    if attrs.existing_type_path.is_some() && attrs.diesel_type.is_some() {
+        return syn::Error::new(
+            Span::call_site(),
+            "Cannot specify both `existing_type_path` and `diesel_type` attributes",
+        )
+        .to_compile_error()
+        .into();
+    }
 
-    // In v3, Clone implementation is opt-in
-    let with_clone = has_db_enum_attr(&input.attrs, "impl_clone_on_sql_mapping");
+    let pg_internal_type = attrs
+        .pg_type
+        .unwrap_or_else(|| input.ident.to_string().to_snake_case());
+    let new_diesel_mapping = attrs
+        .diesel_type
+        .unwrap_or_else(|| format!("{}Mapping", input.ident));
+    let case_style = CaseStyle::from_string(
+        &attrs
+            .value_style
+            .unwrap_or_else(|| "snake_case".to_string()),
+    );
+    let with_clone = attrs.impl_clone_on_sql_mapping;
 
-    let existing_mapping_path = existing_mapping_path.map(|v| {
+    let existing_mapping_path = attrs.existing_type_path.map(|v| {
         v.parse::<proc_macro2::TokenStream>()
             .expect("existing_type_path is not a valid token")
     });
@@ -92,60 +114,26 @@ pub fn derive(input: TokenStream) -> TokenStream {
     }
 }
 
-/// Extract a value from a specific attribute in db_enum(...) namespace
-fn get_db_enum_attr_value(attrs: &[Attribute], name: &str) -> Option<String> {
-    for attr in attrs {
-        if attr.path().is_ident("db_enum") {
-            let nested = match &attr.meta {
-                Meta::List(list) => list,
-                _ => continue,
-            };
+/// Valid attribute names in the db_enum namespace for type-level attributes
+const VALID_TYPE_ATTRIBUTES: [&str; 5] = [
+    "existing_type_path",
+    "diesel_type",
+    "value_style",
+    "pg_type",
+    "impl_clone_on_sql_mapping",
+];
 
-            let mut result = None;
-            nested
-                .parse_nested_meta(|meta| {
-                    if meta.path.is_ident(name) {
-                        if let Ok(value) = meta.value()?.parse::<LitStr>() {
-                            result = Some(value.value());
-                        }
-                    }
-                    Ok(())
-                })
-                .ok();
+/// Valid attribute names in the db_enum namespace for variant-level attributes
+const VALID_VARIANT_ATTRIBUTES: [&str; 1] = ["rename"];
 
-            if result.is_some() {
-                return result;
-            }
-        }
-    }
-    None
-}
-
-/// Check if a specific db_enum attribute flag is present
-fn has_db_enum_attr(attrs: &[Attribute], name: &str) -> bool {
-    for attr in attrs {
-        if attr.path().is_ident("db_enum") {
-            let nested = match &attr.meta {
-                Meta::List(list) => list,
-                _ => continue,
-            };
-
-            let mut found = false;
-            nested
-                .parse_nested_meta(|meta| {
-                    if meta.path.is_ident(name) {
-                        found = true;
-                    }
-                    Ok(())
-                })
-                .ok();
-
-            if found {
-                return true;
-            }
-        }
-    }
-    false
+/// Container for all type-level attributes for DbEnum
+#[derive(Debug, Default)]
+struct DbEnumTypeAttrs {
+    existing_type_path: Option<String>,
+    diesel_type: Option<String>,
+    value_style: Option<String>,
+    pg_type: Option<String>,
+    impl_clone_on_sql_mapping: bool,
 }
 
 /// Defines the casing for the database representation.  Follows serde naming convention.
@@ -175,6 +163,159 @@ impl CaseStyle {
     }
 }
 
+/// Gather and validate all db_enum attributes from a list of attributes
+fn gather_db_enum_attrs(
+    attrs: &[Attribute],
+    is_variant: bool,
+) -> std::result::Result<DbEnumTypeAttrs, syn::Error> {
+    // Debug output
+
+    let valid_attrs = if is_variant {
+        &VALID_VARIANT_ATTRIBUTES[..]
+    } else {
+        &VALID_TYPE_ATTRIBUTES[..]
+    };
+
+    let mut result = DbEnumTypeAttrs::default();
+
+    for attr in attrs.iter() {
+        if attr.path().is_ident("db_enum") {
+            let Meta::List(nested) = &attr.meta else {
+                continue;
+            };
+
+            // Process all the nested meta items in this db_enum attribute
+            nested.parse_nested_meta(|meta| {
+                let attr_name = meta.path.get_ident().map_or_else(|| "unknown".to_string(), |i| i.to_string());
+                // Validate the attribute name
+                if !valid_attrs.contains(&attr_name.as_str()) {
+                    // Try to find a similar attribute name to suggest
+                                        let suggestion = valid_attrs.iter()
+                        .find(|&&valid| attr_name.contains(valid) || valid.contains(&attr_name))
+                        .unwrap_or(&valid_attrs[0]); // Default suggestion is the first valid attribute
+                    let context = if is_variant { "variant" } else { "type" };
+                    return Err(meta.error(format!(
+                        "Unknown db_enum {} attribute: '{}'. Did you mean '{}'? Valid attributes are: {:?}",
+                        context, attr_name, suggestion, valid_attrs
+                    )));}// Process known attributes
+                match attr_name.as_str() {
+                    "existing_type_path" => {
+                        if let Ok(value) = meta.value()?.parse::<LitStr>() {
+                            result.existing_type_path = Some(value.value());
+                        }
+                    },
+                    "diesel_type" => {
+                        if let Ok(value) = meta.value()?.parse::<LitStr>() {
+                            result.diesel_type = Some(value.value());
+                        }
+                    },
+                    "value_style" => {
+                        if let Ok(value) = meta.value()?.parse::<LitStr>() {
+                            result.value_style = Some(value.value());
+                        }
+                    },
+                    "pg_type" => {
+                        if let Ok(value) = meta.value()?.parse::<LitStr>() {
+                            result.pg_type = Some(value.value());
+                        }
+                    },
+                    "impl_clone_on_sql_mapping" => {
+                        result.impl_clone_on_sql_mapping = true;
+                    },
+                    "rename" if is_variant => {
+                        // For variant attributes, we only need to validate since the actual
+                        // handling is done separately in the variant_db generation code
+                        if meta.value().is_err() {
+                            return Err(meta.error(
+                                "The 'rename' attribute requires a value"
+                            ));
+                        }
+                    },
+                    _ => {
+                        // This should never happen due to our earlier validation
+                        return Err(meta.error(format!(
+                            "Unhandled attribute: {}", attr_name
+                        )));
+                    }
+                }
+                Ok(())
+            })?;
+        }
+    }
+    Ok(result)
+}
+
+/// Gets a variant-level attribute value, with validation for attribute names
+fn get_variant_db_enum_attr_value(
+    attrs: &[Attribute],
+    name: &str,
+) -> std::result::Result<Option<String>, syn::Error> {
+    // Ensure we're asking for a valid variant attribute
+    if !VALID_VARIANT_ATTRIBUTES.contains(&name) {
+        return Err(syn::Error::new(
+            Span::call_site(),
+            format!("Internal error: invalid variant attribute name: {}", name),
+        ));
+    }
+
+    for attr in attrs.iter() {
+        if attr.path().is_ident("db_enum") {
+            let Meta::List(nested) = &attr.meta else {
+                continue;
+            };
+
+            let mut result = None;
+            let mut found_invalid = false;
+            let mut invalid_attr = String::new();
+            let mut invalid_span = Span::call_site();
+
+            nested
+                .parse_nested_meta(|meta| {
+                    let attr_name = meta
+                        .path
+                        .get_ident()
+                        .map_or_else(|| "unknown".to_string(), |i| i.to_string());
+
+                    // Validate the attribute name
+                    if !VALID_VARIANT_ATTRIBUTES.contains(&attr_name.as_str()) {
+                        found_invalid = true;
+                        invalid_attr = attr_name;
+                        invalid_span = meta.path.span();
+                        return Ok(());
+                    }
+
+                    if attr_name == name {
+                        if let Ok(value) = meta.value()?.parse::<LitStr>() {
+                            result = Some(value.value());
+                        }
+                    }
+
+                    Ok(())
+                })
+                .ok();
+
+            if found_invalid {
+                // Try to find a similar attribute name to suggest
+                let suggestion = VALID_VARIANT_ATTRIBUTES
+                    .iter()
+                    .find(|&&valid| invalid_attr.contains(valid) || valid.contains(&invalid_attr))
+                    .unwrap_or(&VALID_VARIANT_ATTRIBUTES[0]);
+
+                return Err(syn::Error::new(
+                    invalid_span,
+                    format!("Unknown db_enum variant attribute: '{}'. Did you mean '{}'? Valid attributes are: {:?}",
+                        invalid_attr, suggestion, VALID_VARIANT_ATTRIBUTES)
+                ));
+            }
+
+            if result.is_some() {
+                return Ok(result);
+            }
+        }
+    }
+    Ok(None)
+}
+
 fn generate_derive_enum_impls(
     existing_mapping_path: &Option<proc_macro2::TokenStream>,
     new_diesel_mapping: &Ident,
@@ -199,14 +340,33 @@ fn generate_derive_enum_impls(
         })
         .collect();
 
+    // Check for deprecated db_rename attributes
+    for variant in variants.iter() {
+        for attr in &variant.attrs {
+            if attr.path().is_ident("db_rename") {
+                let variant_name = &variant.ident;
+                return syn::Error::new(
+                    attr.span(),
+                    format!("Invalid attribute format on variant '{}': #[db_rename]. Use the namespaced attribute instead: #[db_enum(rename = \"...\")]", variant_name)
+                )
+                .to_compile_error()
+                .into();
+            }
+        }
+    }
+
     let variants_db: Vec<String> = variants
         .iter()
         .map(|variant| {
-            // Only check for the new db_enum(rename) attribute
-            if let Some(rename) = get_db_enum_attr_value(&variant.attrs, "rename") {
-                return rename;
+            // Use get_variant_db_enum_attr_value for variant attributes with validation
+            let rename_result = get_variant_db_enum_attr_value(&variant.attrs, "rename");
+            match rename_result {
+                Ok(Some(rename)) => rename,
+                Ok(None) => stylize_value(&variant.ident.to_string(), case_style),
+                Err(e) => {
+                    return format!("Error: {}", e); // This will cause a runtime error if it happens, but it's cleaner than panicking
+                }
             }
-            stylize_value(&variant.ident.to_string(), case_style)
         })
         .collect();
     let variants_db_bytes: Vec<LitByteStr> = variants_db
@@ -526,5 +686,60 @@ fn generate_sqlite_impl(diesel_mapping: &Ident, enum_ty: &Ident) -> proc_macro2:
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use syn::parse_quote;
+
+    #[test]
+    fn test_db_enum_macro_validation() {
+        // Test valid attribute
+        let valid_attr: Attribute = parse_quote! {
+            #[db_enum(diesel_type = "MyType")]
+        };
+
+        let invalid_attr: Attribute = parse_quote! {
+            #[db_enum(deisel_type = "MyType")]
+        };
+
+        // Test valid attribute
+        let valid_result = gather_db_enum_attrs(&[valid_attr], false);
+        assert!(valid_result.is_ok(), "Valid attribute should be accepted");
+        if let Ok(attrs) = valid_result {
+            assert_eq!(attrs.diesel_type, Some("MyType".to_string()));
+        }
+
+        // Test invalid attribute
+        let invalid_result = gather_db_enum_attrs(&[invalid_attr], false);
+        assert!(
+            invalid_result.is_err(),
+            "Invalid attribute should be rejected"
+        );
+        if let Err(e) = invalid_result {
+            let error_msg = e.to_string();
+            assert!(
+                error_msg.contains("deisel_type"),
+                "Error message should mention the invalid attribute"
+            );
+        }
+    }
+
+    #[test]
+    fn test_variant_attribute() {
+        // Test the variant rename attribute
+        let variant_attr: Attribute = parse_quote! {
+            #[db_enum(rename = "custom_name")]
+        };
+
+        let result = get_variant_db_enum_attr_value(&[variant_attr.clone()], "rename");
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), Some("custom_name".to_string()));
+
+        // Test with invalid attribute lookup
+        let result = get_variant_db_enum_attr_value(&[variant_attr], "nonexistent_attr");
+        assert!(result.is_err());
     }
 }

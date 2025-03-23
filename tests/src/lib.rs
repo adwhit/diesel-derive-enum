@@ -12,5 +12,6 @@ mod nullable;
 mod pg_array;
 #[cfg(feature = "postgres")]
 mod pg_remote_type;
+mod rename;
 mod simple;
 mod value_style;
