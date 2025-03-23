@@ -3,6 +3,8 @@
 #![allow(dead_code)]
 #![allow(unused_imports)]
 
+#[cfg(feature = "postgres")]
+mod clone_impl;
 mod common;
 mod complex_join;
 mod nullable;
@@ -12,4 +14,3 @@ mod pg_array;
 mod pg_remote_type;
 mod simple;
 mod value_style;
-mod clone_impl; // Added clone_impl module
