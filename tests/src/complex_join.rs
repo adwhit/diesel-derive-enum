@@ -22,7 +22,7 @@ joinable!(servers -> users (user_id));
 allow_tables_to_appear_in_same_query!(users, servers);
 
 #[derive(diesel_derive_enum::DbEnum, Clone, Debug, PartialEq)]
-#[DieselType = "Server_status"]
+#[db_enum(diesel_type = "Server_status")]
 enum ServerStatus {
     Started,
     Stopped,

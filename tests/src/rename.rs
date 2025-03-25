@@ -4,13 +4,13 @@ use diesel::prelude::*;
 use crate::common::get_connection;
 
 #[derive(Debug, PartialEq, diesel_derive_enum::DbEnum)]
-#[DieselType = "Some_Internal_Type"]
+#[db_enum(diesel_type = "Some_Internal_Type", pg_type = "Some_External_Type")]
 pub enum SomeEnum {
-    #[db_rename = "mod"]
+    #[db_enum(rename = "mod")]
     Mod,
-    #[db_rename = "type"]
+    #[db_enum(rename = "type")]
     typo,
-    #[db_rename = "with spaces"]
+    #[db_enum(rename = "with spaces")]
     WithASpace,
 }
 

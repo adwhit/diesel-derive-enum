@@ -19,15 +19,14 @@ table! {
 #[diesel(table_name = test_remote)]
 struct Data {
     id: i32,
-    my_enum: MyRemoteEnum
+    my_enum: MyRemoteEnum,
 }
 
-
 #[derive(Debug, PartialEq, Clone, diesel_derive_enum::DbEnum)]
-#[ExistingTypePath = "MyRemoteEnumMapping"]
+#[db_enum(existing_type_path = "MyRemoteEnumMapping")]
 pub enum MyRemoteEnum {
     This,
-    That
+    That,
 }
 
 #[test]
@@ -35,19 +34,23 @@ fn enum_round_trip() {
     let connection = &mut get_connection();
     use diesel::connection::SimpleConnection;
 
-    connection.batch_execute(
-        r#"
+    connection
+        .batch_execute(
+            r#"
         CREATE TYPE my_remote_enum AS ENUM ('this', 'that');
         CREATE TABLE test_remote (
             id SERIAL PRIMARY KEY,
             my_enum my_remote_enum NOT NULL
         );
     "#,
-    )
-    .unwrap();
+        )
+        .unwrap();
 
     create_table(connection);
-    let data = Data { id: 123, my_enum: MyRemoteEnum::This };
+    let data = Data {
+        id: 123,
+        my_enum: MyRemoteEnum::This,
+    };
     let res = diesel::insert_into(test_remote::table)
         .values(&data)
         .get_result(connection)

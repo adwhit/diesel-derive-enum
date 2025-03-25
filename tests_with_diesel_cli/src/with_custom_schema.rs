@@ -5,7 +5,7 @@ use diesel::result::Error;
 use crate::custom_schema::simple;
 
 #[derive(diesel_derive_enum::DbEnum, Debug, Copy, Clone, PartialEq, Eq)]
-// NOTE: no ExistingTypePath, so we generate the mapping type ourselves
+// NOTE: no existing_type_path, so we generate the mapping type ourselves
 pub enum MyEnum {
     Foo,
     Bar,
