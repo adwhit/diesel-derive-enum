@@ -69,7 +69,7 @@ dependencies = [
 
 [[package]]
 name = "diesel-derive-enum"
-version = "3.0.0"
+version = "3.0.0-beta.1"
 dependencies = [
  "heck 0.4.1",
  "proc-macro2",
