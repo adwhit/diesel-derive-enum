@@ -331,6 +331,7 @@ attribute.  Individual variants can still be renamed using `#[db_enum(rename = "
 |:-------------------:|:---------:|:---|
 | camelCase | BazQuxx | "bazQuxx" |
 | kebab-case | BazQuxx | "baz-quxx" |
+| SCREAMING-KEBAB-CASE | BazQuxx | "BAZ-QUXX" |
 | PascalCase | BazQuxx | "BazQuxx" |
 | SCREAMING_SNAKE_CASE | BazQuxx | "BAZ_QUXX" |
 | UPPERCASE | BazQuxx | "BAZQUXX" |
