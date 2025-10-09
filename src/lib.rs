@@ -26,7 +26,7 @@ use syn::{
 ///   *Note*: Cannot be specified alongside `existing_type_path`
 /// * `#[db_enum(value_style = "snake_case")]` specifies a renaming style from each of
 ///   the rust enum variants to each of the database variants. Either `camelCase`,
-///   `kebab-case`, `PascalCase`, `SCREAMING_SNAKE_CASE`, `snake_case`,
+///   `kebab-case`, `SCREAMING-KEBAB-CASE`, `PascalCase`, `SCREAMING_SNAKE_CASE`, `snake_case`,
 ///   `verbatim`. If omitted, uses `snake_case`.
 /// * `#[db_enum(pg_type = "pg-enum-name")]` specifies the name of the enum type
 ///   as created in the Postgres database (does not apply to other databases)
@@ -132,6 +132,7 @@ struct DbEnumTypeAttrs {
 enum CaseStyle {
     Camel,
     Kebab,
+    ScreamingKebab,
     Pascal,
     Upper,
     ScreamingSnake,
@@ -144,6 +145,7 @@ impl CaseStyle {
         match name {
             "camelCase" => CaseStyle::Camel,
             "kebab-case" => CaseStyle::Kebab,
+            "SCREAMING-KEBAB-CASE" => CaseStyle::ScreamingKebab,
             "PascalCase" => CaseStyle::Pascal,
             "SCREAMING_SNAKE_CASE" => CaseStyle::ScreamingSnake,
             "UPPERCASE" => CaseStyle::Upper,
@@ -373,6 +375,7 @@ fn stylize_value(value: &str, style: CaseStyle) -> String {
     match style {
         CaseStyle::Camel => value.to_lower_camel_case(),
         CaseStyle::Kebab => value.to_kebab_case(),
+        CaseStyle::ScreamingKebab => value.to_kebab_case().to_uppercase(),
         CaseStyle::Pascal => value.to_upper_camel_case(),
         CaseStyle::Upper => value.to_uppercase(),
         CaseStyle::ScreamingSnake => value.to_shouty_snake_case(),
